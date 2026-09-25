@@ -1,0 +1,937 @@
+{
+  "settings": {
+    "companyName": "Elite B Tax Services",
+    "taxYear": "2026",
+    "phoneUs": "+1 (302) 202-2139",
+    "phoneIn": "+91 99127 62149",
+    "whatsapp": "+91 99127 62149",
+    "email": "support@elitebtax.com",
+    "address": "8 The Green, Ste A, Dover, Delaware 19901, US",
+    "facebook": "",
+    "instagram": "",
+    "linkedin": "",
+    "youtube": "",
+    "seoTitle": "Elite B Tax Services — U.S. & India Tax Filing",
+    "seoDescription": "Individual, business and U.S. + India tax services, explained in plain language."
+  },
+  "clients": [
+    {
+      "id": "0caae287-34a3-4839-864f-176dd05a4105",
+      "clientId": "EBT-2026-0001",
+      "firstName": "Ravi",
+      "lastName": "Teja",
+      "email": "ravi.teja@example.com",
+      "phone": "+1 302 555 0111",
+      "dob": "1972-01-10",
+      "address": "10 Main Street",
+      "state": "Texas",
+      "country": "United States",
+      "service": "Federal Tax Filing",
+      "taxYear": "2025",
+      "status": "active",
+      "lastLoginAt": "2026-09-23T04:30:00.000Z",
+      "createdAt": "2026-07-15T04:40:00.000Z"
+    },
+    {
+      "id": "00ba2dcb-2ff3-4cb5-b9ea-4bb1b74d5189",
+      "clientId": "EBT-2026-0002",
+      "firstName": "Priya",
+      "lastName": "Sharma",
+      "email": "priya.sharma@example.com",
+      "phone": "+1 302 555 0112",
+      "dob": "1973-02-11",
+      "address": "11 Main Street",
+      "state": "New Jersey",
+      "country": "United States",
+      "service": "FBAR / FATCA",
+      "taxYear": "2025",
+      "status": "active",
+      "lastLoginAt": "2026-09-22T04:37:00.000Z",
+      "createdAt": "2026-07-19T05:12:00.000Z"
+    },
+    {
+      "id": "90d515e0-c284-4d65-96be-3733675456ba",
+      "clientId": "EBT-2026-0003",
+      "firstName": "Anil",
+      "lastName": "Kumar",
+      "email": "anil.kumar@example.com",
+      "phone": "+91 98765 43210",
+      "dob": "1974-03-12",
+      "address": "12 Main Street",
+      "state": "Telangana",
+      "country": "India",
+      "service": "Indian / NRI Tax",
+      "taxYear": "2025",
+      "status": "active",
+      "lastLoginAt": "2026-09-21T04:44:00.000Z",
+      "createdAt": "2026-07-23T04:44:00.000Z"
+    },
+    {
+      "id": "de08c865-efbd-4b7b-829f-f644bf84de7c",
+      "clientId": "EBT-2026-0004",
+      "firstName": "Meera",
+      "lastName": "Nair",
+      "email": "meera.nair@example.com",
+      "phone": "+1 302 555 0114",
+      "dob": "1975-04-13",
+      "address": "13 Main Street",
+      "state": "California",
+      "country": "United States",
+      "service": "ITIN Services",
+      "taxYear": "2025",
+      "status": "pending",
+      "lastLoginAt": "2026-09-20T04:51:00.000Z",
+      "createdAt": "2026-07-27T05:16:00.000Z"
+    },
+    {
+      "id": "3e5a786b-56f4-4fe7-ba28-ae3e8c85e461",
+      "clientId": "EBT-2026-0005",
+      "firstName": "John",
+      "lastName": "Miller",
+      "email": "john.miller@example.com",
+      "phone": "+1 302 555 0115",
+      "dob": "1976-05-14",
+      "address": "14 Main Street",
+      "state": "Delaware",
+      "country": "United States",
+      "service": "Corporate Tax",
+      "taxYear": "2025",
+      "status": "active",
+      "lastLoginAt": "2026-09-19T04:58:00.000Z",
+      "createdAt": "2026-07-31T04:48:00.000Z"
+    },
+    {
+      "id": "3dcdc07d-d0f7-4fc9-97ed-c5c8947e9907",
+      "clientId": "EBT-2026-0006",
+      "firstName": "Sita",
+      "lastName": "Rao",
+      "email": "sita.rao@example.com",
+      "phone": "+1 302 555 0116",
+      "dob": "1977-06-15",
+      "address": "15 Main Street",
+      "state": "Illinois",
+      "country": "United States",
+      "service": "State Tax Filing",
+      "taxYear": "2025",
+      "status": "active",
+      "lastLoginAt": "2026-09-18T05:05:00.000Z",
+      "createdAt": "2026-08-04T05:20:00.000Z"
+    },
+    {
+      "id": "512fd290-25b6-4ee8-aa7a-4ed2dea6f637",
+      "clientId": "EBT-2026-0007",
+      "firstName": "Arjun",
+      "lastName": "Patel",
+      "email": "arjun.patel@example.com",
+      "phone": "+1 302 555 0117",
+      "dob": "1978-07-16",
+      "address": "16 Main Street",
+      "state": "New York",
+      "country": "United States",
+      "service": "LLC Services",
+      "taxYear": "2025",
+      "status": "pending",
+      "lastLoginAt": "2026-09-17T05:12:00.000Z",
+      "createdAt": "2026-08-08T04:52:00.000Z"
+    },
+    {
+      "id": "136342c3-d37f-43a1-b4a5-e65eeb56fd4f",
+      "clientId": "EBT-2026-0008",
+      "firstName": "Grace",
+      "lastName": "Chen",
+      "email": "grace.chen@example.com",
+      "phone": "+1 302 555 0118",
+      "dob": "1979-08-17",
+      "address": "17 Main Street",
+      "state": "Washington",
+      "country": "United States",
+      "service": "Bookkeeping",
+      "taxYear": "2025",
+      "status": "active",
+      "lastLoginAt": "2026-09-16T05:19:00.000Z",
+      "createdAt": "2026-08-12T05:24:00.000Z"
+    },
+    {
+      "id": "a3d7273e-4c9b-4f6b-93f6-1990dcdbebc2",
+      "clientId": "EBT-2026-0009",
+      "firstName": "Kiran",
+      "lastName": "Das",
+      "email": "kiran.das@example.com",
+      "phone": "+91 90000 12345",
+      "dob": "1980-09-18",
+      "address": "18 Main Street",
+      "state": "Karnataka",
+      "country": "India",
+      "service": "Indian / NRI Tax",
+      "taxYear": "2025",
+      "status": "inactive",
+      "lastLoginAt": "2026-09-15T05:26:00.000Z",
+      "createdAt": "2026-08-16T04:56:00.000Z"
+    },
+    {
+      "id": "04677405-a389-4b81-aaa7-791dfd20d4b9",
+      "clientId": "EBT-2026-0010",
+      "firstName": "Daniel",
+      "lastName": "Brown",
+      "email": "daniel.brown@example.com",
+      "phone": "+1 302 555 0120",
+      "dob": "1981-01-10",
+      "address": "19 Main Street",
+      "state": "Florida",
+      "country": "United States",
+      "service": "Tax Amendments",
+      "taxYear": "2025",
+      "status": "active",
+      "lastLoginAt": "2026-09-14T04:33:00.000Z",
+      "createdAt": "2026-08-20T05:28:00.000Z"
+    }
+  ],
+  "documents": [
+    {
+      "id": "019c7a3c-89c6-497f-973e-eea291229641",
+      "clientId": "0caae287-34a3-4839-864f-176dd05a4105",
+      "kind": "upload",
+      "name": "W-2-Teja.pdf",
+      "type": "W-2",
+      "taxYear": "2025",
+      "sizeKb": 140,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-08-14T05:10:00.000Z"
+    },
+    {
+      "id": "11dce3d7-5ada-48de-804b-a9a55ab307c4",
+      "clientId": "00ba2dcb-2ff3-4cb5-b9ea-4bb1b74d5189",
+      "kind": "upload",
+      "name": "1099-INT-Sharma.pdf",
+      "type": "1099-INT",
+      "taxYear": "2025",
+      "sizeKb": 171,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-08-16T04:56:00.000Z"
+    },
+    {
+      "id": "1e5fd9dc-320e-4960-9f09-87bc6b1fa6af",
+      "clientId": "00ba2dcb-2ff3-4cb5-b9ea-4bb1b74d5189",
+      "kind": "upload",
+      "name": "1099-NEC-Sharma.pdf",
+      "type": "1099-NEC",
+      "taxYear": "2025",
+      "sizeKb": 218,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-08-17T04:49:00.000Z"
+    },
+    {
+      "id": "ae1f92b8-9ca7-4aab-814d-b6dd1cb19ce3",
+      "clientId": "90d515e0-c284-4d65-96be-3733675456ba",
+      "kind": "upload",
+      "name": "1099-NEC-Kumar.pdf",
+      "type": "1099-NEC",
+      "taxYear": "2025",
+      "sizeKb": 202,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-08-18T04:42:00.000Z"
+    },
+    {
+      "id": "c8ca84f3-5eda-4193-9f65-637a23966ad9",
+      "clientId": "90d515e0-c284-4d65-96be-3733675456ba",
+      "kind": "upload",
+      "name": "Prior-year-return-Kumar.pdf",
+      "type": "Prior-year return",
+      "taxYear": "2025",
+      "sizeKb": 249,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-08-19T04:35:00.000Z"
+    },
+    {
+      "id": "ca86ee74-b6b8-404d-a13f-a369c26ff40e",
+      "clientId": "90d515e0-c284-4d65-96be-3733675456ba",
+      "kind": "upload",
+      "name": "Passport---ID-Kumar.pdf",
+      "type": "Passport / ID",
+      "taxYear": "2025",
+      "sizeKb": 296,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-08-20T05:28:00.000Z"
+    },
+    {
+      "id": "a996cc8b-865b-4101-9c26-7e3fa61129da",
+      "clientId": "de08c865-efbd-4b7b-829f-f644bf84de7c",
+      "kind": "upload",
+      "name": "Prior-year-return-Nair.pdf",
+      "type": "Prior-year return",
+      "taxYear": "2025",
+      "sizeKb": 233,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-08-20T05:28:00.000Z"
+    },
+    {
+      "id": "3f507b00-fc99-4813-ad77-c148b7607e48",
+      "clientId": "3e5a786b-56f4-4fe7-ba28-ae3e8c85e461",
+      "kind": "upload",
+      "name": "Passport---ID-Miller.pdf",
+      "type": "Passport / ID",
+      "taxYear": "2025",
+      "sizeKb": 264,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-08-22T05:14:00.000Z"
+    },
+    {
+      "id": "7ae1e16a-d9ef-40ee-9cbe-9b9e72ec3458",
+      "clientId": "3e5a786b-56f4-4fe7-ba28-ae3e8c85e461",
+      "kind": "upload",
+      "name": "Bank-statement-Miller.pdf",
+      "type": "Bank statement",
+      "taxYear": "2025",
+      "sizeKb": 311,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-08-23T05:07:00.000Z"
+    },
+    {
+      "id": "ddc395f1-bc93-4094-a109-1dde5fc8f614",
+      "clientId": "3dcdc07d-d0f7-4fc9-97ed-c5c8947e9907",
+      "kind": "upload",
+      "name": "Bank-statement-Rao.pdf",
+      "type": "Bank statement",
+      "taxYear": "2025",
+      "sizeKb": 295,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-08-24T05:00:00.000Z"
+    },
+    {
+      "id": "5342ce29-a75a-4154-be33-ffbe97b84ecb",
+      "clientId": "3dcdc07d-d0f7-4fc9-97ed-c5c8947e9907",
+      "kind": "upload",
+      "name": "W-2-Rao.pdf",
+      "type": "W-2",
+      "taxYear": "2025",
+      "sizeKb": 342,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-08-25T04:53:00.000Z"
+    },
+    {
+      "id": "4f761f48-ec45-41b0-9370-6bb2b752cfc2",
+      "clientId": "3dcdc07d-d0f7-4fc9-97ed-c5c8947e9907",
+      "kind": "upload",
+      "name": "1099-INT-Rao.pdf",
+      "type": "1099-INT",
+      "taxYear": "2025",
+      "sizeKb": 389,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-08-26T04:46:00.000Z"
+    },
+    {
+      "id": "cf2ca5d5-e42a-43c9-9ca8-ec307ce9c78c",
+      "clientId": "512fd290-25b6-4ee8-aa7a-4ed2dea6f637",
+      "kind": "upload",
+      "name": "W-2-Patel.pdf",
+      "type": "W-2",
+      "taxYear": "2025",
+      "sizeKb": 326,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-08-26T04:46:00.000Z"
+    },
+    {
+      "id": "a0e39cd1-8992-45df-b21e-412e4f5e3150",
+      "clientId": "136342c3-d37f-43a1-b4a5-e65eeb56fd4f",
+      "kind": "upload",
+      "name": "1099-INT-Chen.pdf",
+      "type": "1099-INT",
+      "taxYear": "2025",
+      "sizeKb": 357,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-08-28T04:32:00.000Z"
+    },
+    {
+      "id": "6d9ac58f-4e5a-4466-bd39-bfd935a8a70b",
+      "clientId": "136342c3-d37f-43a1-b4a5-e65eeb56fd4f",
+      "kind": "upload",
+      "name": "1099-NEC-Chen.pdf",
+      "type": "1099-NEC",
+      "taxYear": "2025",
+      "sizeKb": 404,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-08-29T05:25:00.000Z"
+    },
+    {
+      "id": "8b082f41-438c-49df-b3eb-61effda70125",
+      "clientId": "a3d7273e-4c9b-4f6b-93f6-1990dcdbebc2",
+      "kind": "upload",
+      "name": "1099-NEC-Das.pdf",
+      "type": "1099-NEC",
+      "taxYear": "2025",
+      "sizeKb": 388,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-08-30T05:18:00.000Z"
+    },
+    {
+      "id": "518ceff9-10da-4039-851e-fcbae066b4aa",
+      "clientId": "a3d7273e-4c9b-4f6b-93f6-1990dcdbebc2",
+      "kind": "upload",
+      "name": "Prior-year-return-Das.pdf",
+      "type": "Prior-year return",
+      "taxYear": "2025",
+      "sizeKb": 435,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-08-31T05:11:00.000Z"
+    },
+    {
+      "id": "120687bb-014e-4612-a086-8973230ad977",
+      "clientId": "a3d7273e-4c9b-4f6b-93f6-1990dcdbebc2",
+      "kind": "upload",
+      "name": "Passport---ID-Das.pdf",
+      "type": "Passport / ID",
+      "taxYear": "2025",
+      "sizeKb": 482,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-09-01T05:04:00.000Z"
+    },
+    {
+      "id": "1e4fb4e2-a149-446b-9b24-857239a9a2ec",
+      "clientId": "04677405-a389-4b81-aaa7-791dfd20d4b9",
+      "kind": "upload",
+      "name": "Prior-year-return-Brown.pdf",
+      "type": "Prior-year return",
+      "taxYear": "2025",
+      "sizeKb": 419,
+      "storageKey": "",
+      "note": "",
+      "status": "",
+      "uploadedBy": "client",
+      "createdAt": "2026-09-01T05:04:00.000Z"
+    },
+    {
+      "id": "5f3ad537-0223-44ee-9ceb-3bf84c84309a",
+      "clientId": "0caae287-34a3-4839-864f-176dd05a4105",
+      "kind": "draft",
+      "name": "Draft-Estimate-2025-Teja.pdf",
+      "type": "Draft estimation",
+      "taxYear": "2025",
+      "sizeKb": 220,
+      "storageKey": "",
+      "note": "Estimated federal refund $2,140. Please confirm your dependents.",
+      "status": "awaiting_review",
+      "clientComment": "",
+      "uploadedBy": "staff",
+      "createdAt": "2026-09-07T05:22:00.000Z"
+    },
+    {
+      "id": "539cb1fe-e3dc-4d59-8736-287394213fd9",
+      "clientId": "00ba2dcb-2ff3-4cb5-b9ea-4bb1b74d5189",
+      "kind": "draft",
+      "name": "Draft-Estimate-2025-Sharma.pdf",
+      "type": "Draft estimation",
+      "taxYear": "2025",
+      "sizeKb": 250,
+      "storageKey": "",
+      "note": "Balance due $860 — review before we file.",
+      "status": "approved",
+      "clientComment": "",
+      "uploadedBy": "staff",
+      "createdAt": "2026-09-09T05:08:00.000Z"
+    },
+    {
+      "id": "a6d4e748-7de3-4b05-bcd5-4679bd2c4320",
+      "clientId": "90d515e0-c284-4d65-96be-3733675456ba",
+      "kind": "draft",
+      "name": "Draft-Estimate-2025-Kumar.pdf",
+      "type": "Draft estimation",
+      "taxYear": "2025",
+      "sizeKb": 280,
+      "storageKey": "",
+      "note": "Refund $1,020 after the education credit.",
+      "status": "changes_requested",
+      "clientComment": "I also have a 1099-INT from my savings account.",
+      "uploadedBy": "staff",
+      "createdAt": "2026-09-11T04:54:00.000Z"
+    },
+    {
+      "id": "6c844420-c8a5-4a44-8bda-b643374d87bc",
+      "clientId": "de08c865-efbd-4b7b-829f-f644bf84de7c",
+      "kind": "draft",
+      "name": "Draft-Estimate-2025-Nair.pdf",
+      "type": "Draft estimation",
+      "taxYear": "2025",
+      "sizeKb": 310,
+      "storageKey": "",
+      "note": "Includes FBAR reporting for two accounts.",
+      "status": "awaiting_review",
+      "clientComment": "",
+      "uploadedBy": "staff",
+      "createdAt": "2026-09-13T04:40:00.000Z"
+    },
+    {
+      "id": "fd6388c6-ca7a-4e02-b85a-427fe3b7f0c2",
+      "clientId": "3e5a786b-56f4-4fe7-ba28-ae3e8c85e461",
+      "kind": "draft",
+      "name": "Draft-Estimate-2025-Miller.pdf",
+      "type": "Draft estimation",
+      "taxYear": "2025",
+      "sizeKb": 340,
+      "storageKey": "",
+      "note": "State return still pending — federal draft attached.",
+      "status": "approved",
+      "clientComment": "",
+      "uploadedBy": "staff",
+      "createdAt": "2026-09-15T05:26:00.000Z"
+    },
+    {
+      "id": "e53fac22-7704-494c-b433-8c6e21b41c6a",
+      "clientId": "0caae287-34a3-4839-864f-176dd05a4105",
+      "kind": "final",
+      "name": "Form-1040-2025-Teja.pdf",
+      "type": "Final return",
+      "taxYear": "2025",
+      "sizeKb": 400,
+      "storageKey": "",
+      "note": "Accepted by the IRS.",
+      "status": "",
+      "uploadedBy": "staff",
+      "createdAt": "2026-09-16T05:19:00.000Z"
+    },
+    {
+      "id": "f276f23b-48ee-492c-bea8-453de69885b6",
+      "clientId": "00ba2dcb-2ff3-4cb5-b9ea-4bb1b74d5189",
+      "kind": "final",
+      "name": "Form-1040-2025-Sharma.pdf",
+      "type": "Final return",
+      "taxYear": "2025",
+      "sizeKb": 440,
+      "storageKey": "",
+      "note": "Accepted by the IRS.",
+      "status": "",
+      "uploadedBy": "staff",
+      "createdAt": "2026-09-18T05:05:00.000Z"
+    },
+    {
+      "id": "29739acc-5350-49a5-8063-2821e9b5f14c",
+      "clientId": "90d515e0-c284-4d65-96be-3733675456ba",
+      "kind": "final",
+      "name": "Form-1040-2025-Kumar.pdf",
+      "type": "Final return",
+      "taxYear": "2025",
+      "sizeKb": 480,
+      "storageKey": "",
+      "note": "Accepted by the IRS.",
+      "status": "",
+      "uploadedBy": "staff",
+      "createdAt": "2026-09-20T04:51:00.000Z"
+    }
+  ],
+  "leads": [
+    {
+      "id": "d1964c1c-0a4e-434f-b4e4-1d24bb366bce",
+      "name": "Vikram Singh",
+      "email": "vikram@example.com",
+      "phone": "+1 302 555 0190",
+      "service": "Corporate Tax",
+      "taxYear": "2025",
+      "message": "S-corp return plus bookkeeping.",
+      "status": "new",
+      "createdAt": "2026-09-22T04:37:00.000Z"
+    },
+    {
+      "id": "7e0c39ab-8d43-4518-bc1c-d8d1593eb867",
+      "name": "Nisha Gupta",
+      "email": "nisha@example.com",
+      "phone": "+1 302 555 0191",
+      "service": "ITIN Services",
+      "taxYear": "2025",
+      "message": "ITIN for spouse and child.",
+      "status": "contacted",
+      "createdAt": "2026-09-20T06:51:00.000Z"
+    },
+    {
+      "id": "ea508956-2642-4ad9-b850-4ba109f5ae92",
+      "name": "Peter Adams",
+      "email": "peter@example.com",
+      "phone": "+1 302 555 0192",
+      "service": "Federal Tax Filing",
+      "taxYear": "2025",
+      "message": "",
+      "status": "qualified",
+      "createdAt": "2026-09-18T10:05:00.000Z"
+    },
+    {
+      "id": "680cc205-1082-4f48-897a-a4acabb0d253",
+      "name": "Divya Menon",
+      "email": "divya@example.com",
+      "phone": "+91 99000 11223",
+      "service": "Indian / NRI Tax",
+      "taxYear": "2025",
+      "message": "US + India filing this year.",
+      "status": "converted",
+      "createdAt": "2026-09-14T07:33:00.000Z"
+    }
+  ],
+  "inquiries": [
+    {
+      "id": "c28aab99-34bd-46c5-be37-bd380e17a742",
+      "name": "Rahul Verma",
+      "phone": "+91 99887 76655",
+      "message": "Need help filing ITR for FY 2024-25.",
+      "page": "/",
+      "createdAt": "2026-09-22T03:37:00.000Z"
+    },
+    {
+      "id": "e406821f-519e-4f43-8f80-7717a396b09a",
+      "name": "Laura Smith",
+      "phone": "+1 302 555 0180",
+      "message": "Do you handle multi-state returns?",
+      "page": "/tax-services",
+      "createdAt": "2026-09-21T08:44:00.000Z"
+    },
+    {
+      "id": "cd9b782d-e9b9-42fb-b021-3cd168afefdb",
+      "name": "Suresh Babu",
+      "phone": "+91 91234 56780",
+      "message": "FBAR filing for 3 foreign accounts.",
+      "page": "/fbar",
+      "createdAt": "2026-09-19T05:58:00.000Z"
+    }
+  ],
+  "cmsPages": [
+    {
+      "id": "e3f4804e-6569-4839-9035-030dffdf916c",
+      "title": "Welcome to Elite B Tax",
+      "slug": "/",
+      "body": "Your taxes. Done right. Without the stress.",
+      "createdAt": "2026-07-25T04:30:00.000Z"
+    },
+    {
+      "id": "809f0358-d60d-42d8-a885-9d639d5f84f4",
+      "title": "Federal Refund Status",
+      "slug": "/refund-status/federal",
+      "body": "Check your federal refund with the IRS.",
+      "createdAt": "2026-07-25T04:30:00.000Z"
+    },
+    {
+      "id": "85f0e190-3c5a-4211-966a-5dd39e710b2e",
+      "title": "State Refund Status",
+      "slug": "/refund-status/state",
+      "body": "State-by-state refund trackers.",
+      "createdAt": "2026-07-25T04:30:00.000Z"
+    },
+    {
+      "id": "7e803627-8079-4ebf-8481-5308dab8eed5",
+      "title": "Pay Federal Taxes Online",
+      "slug": "/pay/federal",
+      "body": "IRS Direct Pay and EFTPS.",
+      "createdAt": "2026-07-26T05:23:00.000Z"
+    },
+    {
+      "id": "170e5ab9-e257-4a5a-ba9a-ef82d26344c0",
+      "title": "Pay State Taxes Online",
+      "slug": "/pay/state",
+      "body": "State payment portals.",
+      "createdAt": "2026-07-26T05:23:00.000Z"
+    },
+    {
+      "id": "cbbe875c-34ba-4879-83a5-25673edb873a",
+      "title": "Client Tax Questionnaire",
+      "slug": "/questionnaire",
+      "body": "What we ask before preparing a return.",
+      "createdAt": "2026-07-27T05:16:00.000Z"
+    }
+  ],
+  "banners": [
+    {
+      "id": "b6a72eb0-f581-4aa7-ad34-0293bfcd5aab",
+      "title": "Your Taxes. Done Right.",
+      "subtitle": "Professional tax preparation without the stress.",
+      "cta": "Get Started",
+      "link": "/get-started",
+      "active": "true",
+      "createdAt": "2026-09-03T04:50:00.000Z"
+    },
+    {
+      "id": "5ac55566-2a0f-4348-b9df-79125fee5df8",
+      "title": "U.S. + India Tax Under One Roof",
+      "subtitle": "One team for both countries.",
+      "cta": "Indian Tax Services",
+      "link": "/indian-tax-services",
+      "active": "true",
+      "createdAt": "2026-08-24T05:00:00.000Z"
+    }
+  ],
+  "services": [
+    {
+      "id": "0ff81386-44d2-4084-a720-adc938ac1f06",
+      "name": "Federal Tax Filing",
+      "price": 149,
+      "active": "true",
+      "createdAt": "2026-08-14T05:10:00.000Z"
+    },
+    {
+      "id": "2d4c8484-deb7-419a-a0d7-3ff5d19d4d03",
+      "name": "State Tax Filing",
+      "price": 99,
+      "active": "true",
+      "createdAt": "2026-08-13T05:17:00.000Z"
+    },
+    {
+      "id": "767c04d0-ec88-49cf-8292-4699e34cc5ff",
+      "name": "FBAR / FATCA",
+      "price": 199,
+      "active": "true",
+      "createdAt": "2026-08-12T05:24:00.000Z"
+    },
+    {
+      "id": "934ebbce-b0f5-4085-9061-6d15bef4aed8",
+      "name": "ITIN Services",
+      "price": 129,
+      "active": "true",
+      "createdAt": "2026-08-11T04:31:00.000Z"
+    },
+    {
+      "id": "49cfb0c5-ca9d-4a42-88bd-c45dda1b85c7",
+      "name": "Tax Amendments",
+      "price": 179,
+      "active": "true",
+      "createdAt": "2026-08-10T04:38:00.000Z"
+    },
+    {
+      "id": "d8c52b9e-69d4-434d-91f9-f9e6a2ba4945",
+      "name": "IRS Representation",
+      "price": 299,
+      "active": "true",
+      "createdAt": "2026-08-09T04:45:00.000Z"
+    },
+    {
+      "id": "b45bdb05-63cd-4a03-b90e-aa50da22dc73",
+      "name": "LLC Services",
+      "price": 349,
+      "active": "true",
+      "createdAt": "2026-08-08T04:52:00.000Z"
+    },
+    {
+      "id": "9ba65499-8e54-46a4-a70e-888b6f76fe54",
+      "name": "Entity Formation",
+      "price": 279,
+      "active": "true",
+      "createdAt": "2026-08-07T04:59:00.000Z"
+    },
+    {
+      "id": "6a933613-3be3-4e51-9101-a2792cb063ac",
+      "name": "Corporate Tax",
+      "price": 499,
+      "active": "true",
+      "createdAt": "2026-08-06T05:06:00.000Z"
+    },
+    {
+      "id": "3afa783a-f030-469a-9403-0142fda84ef5",
+      "name": "Bookkeeping",
+      "price": 249,
+      "active": "true",
+      "createdAt": "2026-08-05T05:13:00.000Z"
+    },
+    {
+      "id": "07f67ade-18bb-4765-94db-81c0efd91e25",
+      "name": "Payroll",
+      "price": 199,
+      "active": "true",
+      "createdAt": "2026-08-04T05:20:00.000Z"
+    },
+    {
+      "id": "a4de6d9b-994a-4fc4-a3e9-2f67fdbbd528",
+      "name": "Indian / NRI Tax",
+      "price": 229,
+      "active": "true",
+      "createdAt": "2026-08-03T05:27:00.000Z"
+    }
+  ],
+  "taxNotes": [
+    {
+      "id": "b356330c-c778-4770-9462-d18ff00caaaa",
+      "title": "Standard deduction",
+      "body": "Confirm the current year's figures against IRS Pub 501 before filing.",
+      "createdAt": "2026-09-11T04:54:00.000Z"
+    },
+    {
+      "id": "af78e643-3a6e-4885-9ab7-2d1d3ee113e8",
+      "title": "FBAR deadline",
+      "body": "April 15, with an automatic extension to October 15.",
+      "createdAt": "2026-08-29T05:25:00.000Z"
+    },
+    {
+      "id": "94816fcb-b740-430c-bcfd-9ed5b59d8235",
+      "title": "ITIN renewals",
+      "body": "ITINs unused on a return for 3 years expire.",
+      "createdAt": "2026-08-16T04:56:00.000Z"
+    }
+  ],
+  "employees": [
+    {
+      "id": "7f700fc0-20c6-4a32-a5ea-0bab201fa0fa",
+      "createdAt": "2026-09-23T20:45:49.088Z",
+      "name": "sdsd",
+      "email": "karneedisriram63@gmail.com",
+      "phone": "09912762149",
+      "role": "Associate",
+      "status": "active",
+      "passwordHash": "scrypt$1b130cf2f5ade769c6153fe2dd07272d$71fbfe35517965d26f44dbceb0635dbbf1115239988f144248edc23f182b60f2985ccf7e3fa2a1d9afd1f0d1754702257593b2625101ea7603eafe4c918210c6"
+    },
+    {
+      "id": "a0c40353-edb2-469b-a76a-71b8a3b377d8",
+      "createdAt": "2026-09-22T18:49:27.029Z",
+      "name": "Sri Rama Chandra Murthy Karneedi",
+      "email": "karneedisriram02@gmail.com",
+      "phone": "09912762149",
+      "role": "Associate",
+      "status": "active"
+    },
+    {
+      "id": "59429453-5e0f-4c04-bbd1-6bff5b613c13",
+      "name": "Super Admin",
+      "email": "admin@elitebtax.com",
+      "phone": "+1 302 202 2139",
+      "role": "Super Admin",
+      "status": "active",
+      "passwordHash": "scrypt$040360cd104025601f51d99e5c21c86b$4debc5d0a02f4c12ee9f540ecc4c99c31ce83b0b798cdd396910bbb81821f0f5577524fb471b6a081f0c1512e050a889135ec12e2ed747e9e6b56c4012f84855",
+      "createdAt": "2025-11-27T04:30:00.000Z"
+    },
+    {
+      "id": "2a757e56-cb00-4192-b87c-7ef4feec963f",
+      "name": "Deepa M.",
+      "email": "deepa@elitebtax.com",
+      "phone": "+91 90000 22334",
+      "role": "Preparer",
+      "status": "active",
+      "createdAt": "2026-05-26T04:30:00.000Z"
+    },
+    {
+      "id": "6f5e1d6b-dd90-4b29-99cb-701ae619f6c9",
+      "name": "Alex Turner",
+      "email": "alex@elitebtax.com",
+      "phone": "+1 302 555 0170",
+      "role": "Reviewer",
+      "status": "active",
+      "createdAt": "2026-07-05T04:50:00.000Z"
+    }
+  ],
+  "logs": [
+    {
+      "id": "04483107-a696-46cb-8a29-dadf37190e04",
+      "who": "admin@elitebtax.com",
+      "action": "Signed in",
+      "detail": "",
+      "createdAt": "2026-09-24T13:26:41.847Z"
+    },
+    {
+      "id": "6dd3962a-0e4b-43fb-8422-8e304d4ec1a3",
+      "who": "admin@elitebtax.com",
+      "action": "Signed in",
+      "detail": "",
+      "createdAt": "2026-09-23T20:51:12.823Z"
+    },
+    {
+      "id": "dbcf909b-c3c6-47c1-9579-f9a035002630",
+      "who": "admin@elitebtax.com",
+      "action": "Signed out",
+      "detail": "",
+      "createdAt": "2026-09-23T20:49:24.732Z"
+    },
+    {
+      "id": "ab1ac17a-16fe-4011-a4e7-59b595299d83",
+      "who": "admin@elitebtax.com",
+      "action": "Created employee",
+      "detail": "sdsd",
+      "createdAt": "2026-09-23T20:45:49.096Z"
+    },
+    {
+      "id": "dc0430f2-eebd-4fe8-ad6e-e29efe58da8a",
+      "who": "admin@elitebtax.com",
+      "action": "Updated settings",
+      "detail": "",
+      "createdAt": "2026-09-23T18:57:03.681Z"
+    },
+    {
+      "id": "533c485d-a8e3-4c85-8d82-26bd5ebb8b10",
+      "who": "admin@elitebtax.com",
+      "action": "Updated settings",
+      "detail": "",
+      "createdAt": "2026-09-23T18:56:58.381Z"
+    },
+    {
+      "id": "c45e8c5d-8f3d-4273-843d-d86bceaacfee",
+      "who": "admin@elitebtax.com",
+      "action": "Signed in",
+      "detail": "",
+      "createdAt": "2026-09-23T18:48:12.895Z"
+    },
+    {
+      "id": "5e1f295d-c270-415f-8c43-566b9cb15c2c",
+      "who": "admin@elitebtax.com",
+      "action": "Created employee",
+      "detail": "Sri Rama Chandra Murthy Karneedi",
+      "createdAt": "2026-09-22T18:49:27.044Z"
+    },
+    {
+      "id": "65174870-54e1-45bb-9b83-79d8c6e773be",
+      "who": "admin@elitebtax.com",
+      "action": "Signed in",
+      "detail": "",
+      "createdAt": "2026-09-22T18:44:12.009Z"
+    },
+    {
+      "id": "a7d26cec-7124-454b-a43b-57626da7bb1a",
+      "who": "system",
+      "action": "Database created",
+      "detail": "Seeded with sample data",
+      "createdAt": "2026-09-22T18:43:34.198Z"
+    }
+  ]
+}
