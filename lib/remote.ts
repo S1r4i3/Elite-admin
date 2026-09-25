@@ -1,6 +1,6 @@
 import "server-only";
 import { BUCKET, sb } from "./supabase";
-import type { Client, Collection, DocumentRow, Inquiry, Lead, Row } from "./types";
+import type { Client, Collection, DocumentRow, Inquiry, Lead, Row, Settings } from "./types";
 
 /**
  * Live website data (Supabase). Clients, their documents, leads and inquiries
@@ -8,7 +8,7 @@ import type { Client, Collection, DocumentRow, Inquiry, Lead, Row } from "./type
  * always see the same rows. Everything else stays in data/db.json.
  */
 
-export const REMOTE_COLLECTIONS = ["clients", "documents", "leads", "inquiries"] as const;
+export const REMOTE_COLLECTIONS = ["clients", "documents", "leads", "inquiries", "employees", "cmsPages", "banners", "services", "taxNotes", "logs"] as const;
 export type RemoteCollection = (typeof REMOTE_COLLECTIONS)[number];
 export const isRemote = (c: Collection): c is RemoteCollection => (REMOTE_COLLECTIONS as readonly string[]).includes(c);
 
@@ -17,6 +17,12 @@ const TABLE: Record<RemoteCollection, string> = {
   documents: "portal_documents",
   leads: "leads",
   inquiries: "inquiries",
+  employees: "employees",
+  cmsPages: "cms_pages",
+  banners: "banners",
+  services: "service_prices",
+  taxNotes: "tax_notes",
+  logs: "admin_logs",
 };
 
 const fail = (where: string, error: { message: string } | null) => {
@@ -92,16 +98,46 @@ const toInquiry = (r: any): Inquiry => ({
   createdAt: r.created_at,
 });
 
+const stamps = (r: any) => ({ id: r.id, createdAt: r.created_at, updatedAt: r.updated_at ?? undefined });
 const MAP: Record<RemoteCollection, (r: any) => Row> = {
   clients: toClient,
   documents: toDocument,
   leads: toLead,
   inquiries: toInquiry,
+  employees: (r) => ({ ...stamps(r), name: r.name, email: r.email, phone: r.phone ?? "", role: r.role, status: r.status, code: r.code ?? "", passwordHash: r.password_hash ?? undefined }),
+  cmsPages: (r) => ({ ...stamps(r), title: r.title, slug: r.slug, body: r.body ?? "" }),
+  banners: (r) => ({ ...stamps(r), title: r.title, subtitle: r.subtitle ?? "", cta: r.cta ?? "", link: r.link ?? "", active: String(r.active) }),
+  services: (r) => ({ ...stamps(r), name: r.name, price: Number(r.price ?? 0), active: String(r.active) }),
+  taxNotes: (r) => ({ ...stamps(r), title: r.title, body: r.body ?? "" }),
+  logs: (r) => ({ ...stamps(r), who: r.who, action: r.action, detail: r.detail ?? "" }),
+};
+
+/** Simple one-to-one column maps for the admin-owned tables. */
+const SIMPLE: Partial<Record<RemoteCollection, Record<string, string>>> = {
+  employees: { name: "name", email: "email", phone: "phone", role: "role", status: "status", code: "code", passwordHash: "password_hash" },
+  cmsPages: { title: "title", slug: "slug", body: "body" },
+  banners: { title: "title", subtitle: "subtitle", cta: "cta", link: "link", active: "active" },
+  services: { name: "name", price: "price", active: "active" },
+  taxNotes: { title: "title", body: "body" },
+  logs: { who: "who", action: "action", detail: "detail" },
 };
 
 /** App-shape patch → table columns (only the fields each table actually has). */
 function toColumns(coll: RemoteCollection, p: Record<string, any>) {
   const out: Record<string, unknown> = {};
+  const simple = SIMPLE[coll];
+  if (simple) {
+    for (const [key, col] of Object.entries(simple)) {
+      if (p[key] === undefined) continue;
+      let v = p[key];
+      if (col === "active") v = v === true || String(v) === "true";
+      else if (col === "price") v = Number(v) || 0;
+      else if (col === "email") v = String(v).trim().toLowerCase();
+      else if (typeof v === "string" && v === "" && col !== "body") v = null;
+      out[col] = v;
+    }
+    return out;
+  }
   const set = (col: string, v: unknown) => {
     if (v !== undefined) out[col] = v === "" ? null : v;
   };
@@ -243,4 +279,47 @@ export async function remoteReadFile(key: string) {
 
 export async function remoteDeleteFiles(keys: string[]) {
   await sb().storage.from(BUCKET).remove(keys);
+}
+
+/* ── Admin settings (single row, id = 1) ─────────────────── */
+
+
+export async function remoteGetSettings(defaults: Settings): Promise<Settings> {
+  const { data, error } = await sb().from("settings").select("*").eq("id", 1).maybeSingle();
+  fail("get settings", error);
+  if (!data) return defaults;
+  return {
+    ...defaults,
+    ...((data.data as Partial<Settings>) ?? {}),
+    companyName: data.company_name ?? defaults.companyName,
+    taxYear: data.tax_year ?? defaults.taxYear,
+  };
+}
+
+export async function remoteSaveSettings(next: Settings) {
+  const { error } = await sb()
+    .from("settings")
+    .upsert({ id: 1, company_name: next.companyName, tax_year: next.taxYear, email: next.email || null, phone: next.phoneUs || null, address: next.address || null, data: next });
+  fail("save settings", error);
+  return next;
+}
+
+export async function remoteFindEmployee(email: string) {
+  const { data, error } = await sb().from("employees").select("*").ilike("email", email.trim()).maybeSingle();
+  fail("find employee", error);
+  return data ? MAP.employees(data) : null;
+}
+
+export async function remoteCount(coll: RemoteCollection) {
+  const { count, error } = await sb().from(TABLE[coll]).select("id", { count: "exact", head: true });
+  fail(`count ${coll}`, error);
+  return count ?? 0;
+}
+
+/** Bulk insert (used once to move the local data/db.json into Supabase). */
+export async function remoteImport(coll: RemoteCollection, rows: Record<string, unknown>[]) {
+  if (!rows.length) return;
+  const payload = rows.map((r) => ({ ...toColumns(coll, r), ...(r.createdAt ? { created_at: r.createdAt } : {}) }));
+  const { error } = await sb().from(TABLE[coll]).insert(payload);
+  fail(`import ${coll}`, error);
 }

@@ -6,11 +6,94 @@ import { hashPassword } from "./auth";
 import type { Client, Collection, DB, DocumentRow, Row, Settings } from "./types";
 import { SERVICES } from "./types";
 import { supabaseEnabled } from "./supabase";
-import { isRemote, remoteCreate, remoteGet, remoteList, remoteRemove, remoteUpdate } from "./remote";
+import {
+  isRemote,
+  remoteCount,
+  remoteCreate,
+  remoteFindEmployee,
+  remoteGet,
+  remoteGetSettings,
+  remoteImport,
+  remoteList,
+  remoteRemove,
+  remoteSaveSettings,
+  remoteUpdate,
+  type RemoteCollection,
+} from "./remote";
 
-/** Clients, documents, leads and inquiries come from the website's Supabase when configured. */
+/**
+ * With Supabase configured (always on Vercel) EVERYTHING lives in Supabase: clients and documents
+ * (shared with the website) and the admin's own data — employees, settings, CMS, logs.
+ * The local data/db.json is only used when Supabase isn't configured (offline development).
+ * Vercel's filesystem is read-only, so a file database can't work there.
+ */
 const live = (coll: Collection) => supabaseEnabled() && isRemote(coll);
 export const isLive = () => supabaseEnabled();
+
+/* ── One-time bootstrap of the admin tables in Supabase ───────────────────────
+ * If Supabase has no employees yet:
+ *  • a local data/db.json exists (your dev machine) → copy staff, settings, CMS, banners,
+ *    prices, notes and logs into Supabase, so the deployed admin has the same logins;
+ *  • otherwise (a fresh Vercel deploy) → create the first Admin from ADMIN_EMAIL / ADMIN_PASSWORD.
+ */
+let bootstrapped: Promise<void> | null = null;
+function ready() {
+  if (!supabaseEnabled()) return Promise.resolve();
+  bootstrapped ??= bootstrap().catch((e) => {
+    bootstrapped = null; // retry on the next request
+    throw e;
+  });
+  return bootstrapped;
+}
+
+async function bootstrap() {
+  if ((await remoteCount("employees")) > 0) return;
+  let local: DB | null = null;
+  try {
+    local = JSON.parse(await fs.readFile(DB_FILE, "utf8")) as DB;
+  } catch {
+    local = null;
+  }
+  if (local?.employees?.length) {
+    const copy = async (coll: RemoteCollection, rows: Row[] | undefined) => {
+      if ((await remoteCount(coll)) === 0) await remoteImport(coll, (rows ?? []).map(({ id: _id, ...r }) => r));
+    };
+    await copy("employees", local.employees);
+    await copy("cmsPages", local.cmsPages);
+    await copy("banners", local.banners);
+    await copy("services", local.services);
+    await copy("taxNotes", local.taxNotes);
+    await copy("logs", local.logs?.slice(0, 500));
+    if (local.settings) await remoteSaveSettings(local.settings);
+    console.info(`[db] Copied ${local.employees.length} employees and the admin content from data/db.json into Supabase.`);
+    return;
+  }
+  const email = (process.env.ADMIN_EMAIL || "admin@elitebtax.com").toLowerCase();
+  const password = process.env.ADMIN_PASSWORD;
+  if (!password && process.env.NODE_ENV === "production") {
+    throw new Error("No employees exist yet. Set ADMIN_EMAIL and ADMIN_PASSWORD in the environment to create the first Admin.");
+  }
+  await remoteImport("employees", [
+    { name: "Admin", email, role: "Admin", status: "active", code: "AD1", passwordHash: await hashPassword(password || "admin123") },
+  ]);
+  console.info(`[db] Created the first Admin account (${email}).`);
+}
+
+const DEFAULT_SETTINGS = (): Settings => ({
+  companyName: "Elite B Tax Services",
+  taxYear: String(new Date().getFullYear()),
+  phoneUs: "+1 (302) 202-2139",
+  phoneIn: "+91 99127 62149",
+  whatsapp: "+91 99127 62149",
+  email: "support@elitebtax.com",
+  address: "8 The Green, Ste A, Dover, Delaware 19901, US",
+  facebook: "",
+  instagram: "",
+  linkedin: "",
+  youtube: "",
+  seoTitle: "Elite B Tax Services — U.S. & India Tax Filing",
+  seoDescription: "Individual, business and U.S. + India tax services, explained in plain language.",
+});
 
 /**
  * JSON-file data store.
@@ -93,6 +176,10 @@ async function seed(): Promise<DB> {
 
 async function read(): Promise<DB> {
   if (cache) return cache;
+  if (process.env.VERCEL) {
+    // Vercel's filesystem is read-only and wiped on every deploy — a JSON file can't be the database there.
+    throw new Error("Supabase is not configured. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to this Vercel project's environment variables, then redeploy.");
+  }
   try {
     cache = JSON.parse(await fs.readFile(DB_FILE, "utf8")) as DB;
   } catch {
@@ -124,22 +211,36 @@ function mutate<T>(fn: (db: DB) => T | Promise<T>): Promise<T> {
 
 /* ── Public API ─────────────────────────────────────────── */
 
-export const getSettings = async (): Promise<Settings> => (await read()).settings;
+export async function getSettings(): Promise<Settings> {
+  if (supabaseEnabled()) {
+    await ready();
+    return remoteGetSettings(DEFAULT_SETTINGS());
+  }
+  return (await read()).settings;
+}
 
-export const saveSettings = (patch: Partial<Settings>) =>
-  mutate((db) => {
+export async function saveSettings(patch: Partial<Settings>) {
+  if (supabaseEnabled()) return remoteSaveSettings({ ...(await getSettings()), ...patch });
+  return mutate((db) => {
     Object.assign(db.settings, patch);
     return db.settings;
   });
+}
 
 export async function list<T extends Row>(coll: Collection): Promise<T[]> {
-  if (live(coll) && isRemote(coll)) return (await remoteList(coll)) as T[];
+  if (live(coll) && isRemote(coll)) {
+    await ready();
+    return (await remoteList(coll)) as T[];
+  }
   const db = await read();
   return [...(db[coll] as unknown as T[])].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
 export async function get<T extends Row>(coll: Collection, id: string): Promise<T | null> {
-  if (live(coll) && isRemote(coll)) return (await remoteGet(coll, id)) as T | null;
+  if (live(coll) && isRemote(coll)) {
+    await ready();
+    return (await remoteGet(coll, id)) as T | null;
+  }
   const db = await read();
   return ((db[coll] as unknown as T[]).find((r) => r.id === id) as T) ?? null;
 }
@@ -174,6 +275,7 @@ export function remove(coll: Collection, id: string): Promise<boolean> {
 
 /** Writes an entry to the admin activity log. */
 export function log(who: string, action: string, detail = "") {
+  if (supabaseEnabled()) return remoteCreate("logs", { who, action, detail }).then(() => undefined).catch((e) => console.error("[log]", e));
   return mutate((db) => {
     db.logs.unshift({ id: randomUUID(), who, action, detail, createdAt: new Date().toISOString() });
     db.logs = db.logs.slice(0, 1000);
@@ -191,13 +293,19 @@ export function nextClientId(): Promise<string> {
 }
 
 export async function findEmployeeByEmail(email: string) {
+  if (supabaseEnabled()) {
+    await ready();
+    return (await remoteFindEmployee(email)) as DB["employees"][number] | null;
+  }
   const db = await read();
   return db.employees.find((e) => e.email.toLowerCase() === email.toLowerCase()) ?? null;
 }
 
 /** Dashboard counters + the last 6 months of document activity. */
 export async function stats(scope?: { isSuper: boolean; email: string }) {
-  const local = await read();
+  const local = supabaseEnabled()
+    ? ({ settings: await getSettings(), logs: await list<DB["logs"][number]>("logs") } as Pick<DB, "settings" | "logs">)
+    : await read();
   const limited = scope && !scope.isSuper;
   let [clients, documents, leads, inquiries] = await Promise.all([
     list<DB["clients"][number]>("clients"),
@@ -244,8 +352,8 @@ export async function stats(scope?: { isSuper: boolean; email: string }) {
 export async function nextEmployeeCode(role: string) {
   const { ROLE_PREFIX, normalizeRole } = await import("./workflow-shared");
   const prefix = ROLE_PREFIX[normalizeRole(role)];
-  const db = await read();
-  const used = db.employees.map((e) => String(e.code || "").toUpperCase());
+  const employees = supabaseEnabled() ? await list<DB["employees"][number]>("employees") : (await read()).employees;
+  const used = employees.map((e) => String(e.code || "").toUpperCase());
   let n = 1;
   while (used.includes(`${prefix}${n}`)) n++;
   return `${prefix}${n}`;
