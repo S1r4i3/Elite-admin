@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findEmployeeByEmail, log } from "@/lib/db";
-import { createSessionToken, sessionCookieOptions, SESSION_COOKIE, verifyPassword } from "@/lib/auth";
+import { createSessionToken, sessionCookieOptions, sessionSecret, SESSION_COOKIE, verifyPassword } from "@/lib/auth";
 
 /** POST /api/auth/login  { email, password } */
 export async function POST(req: Request) {
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   }
 
   await log(employee.email, "Signed in");
-  if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
+  if (!sessionSecret()) {
     return NextResponse.json({ ok: false, error: "Server setup problem: SESSION_SECRET is not set in the environment." }, { status: 500 });
   }
   const res = NextResponse.json({ ok: true, admin: { id: employee.id, name: employee.name, email: employee.email, role: employee.role } });

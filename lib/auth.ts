@@ -8,10 +8,24 @@ const scrypt = promisify(_scrypt) as (pw: string, salt: Buffer, len: number) => 
 export const SESSION_COOKIE = "ebt_admin_session";
 const MAX_AGE = 60 * 60 * 8; // 8 hours
 
+/**
+ * Key that signs the admin session cookie.
+ * SESSION_SECRET is preferred. If it's missing on the host, derive a stable server-only
+ * secret from the Supabase service key (never sent to the browser), so a forgotten
+ * env var can't lock every admin out.
+ */
+export function sessionSecret(): string | null {
+  const s = process.env.SESSION_SECRET?.trim();
+  if (s && s.length >= 16) return s;
+  const k = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "").trim();
+  if (k) return createHmac("sha256", k).update("ebt-admin-session-v1").digest("hex");
+  return process.env.NODE_ENV === "production" ? null : "dev-only-insecure-secret";
+}
+
 function secret() {
-  const s = process.env.SESSION_SECRET;
-  if (!s && process.env.NODE_ENV === "production") throw new Error("SESSION_SECRET must be set in production");
-  return s || "dev-only-insecure-secret";
+  const s = sessionSecret();
+  if (!s) throw new Error("SESSION_SECRET must be set in production");
+  return s;
 }
 
 /* ── Passwords (scrypt) ─────────────────────────────────── */
