@@ -58,7 +58,28 @@ async function bootstrap() {
     const copy = async (coll: RemoteCollection, rows: Row[] | undefined) => {
       if ((await remoteCount(coll)) === 0) await remoteImport(coll, (rows ?? []).map(({ id: _id, ...r }) => r));
     };
-    await copy("employees", local.employees);
+    // Data from db.json can contain duplicate queue codes (e.g. two "TP1") or emails,
+    // which violate the unique constraints in Supabase. Keep the first email, renumber codes.
+    const seenEmail = new Set<string>();
+    const seenCode = new Set<string>();
+    const allCodes = new Set((local.employees as Row[]).map((e) => String(e.code ?? "").toUpperCase()));
+    const staff = (local.employees as Row[]).filter((e) => {
+      const em = String(e.email ?? "").trim().toLowerCase();
+      if (!em || seenEmail.has(em)) return false;
+      seenEmail.add(em);
+      return true;
+    }).map((e) => {
+      let code = String(e.code ?? "").toUpperCase();
+      if (code && seenCode.has(code)) {
+        const prefix = code.replace(/\d+$/, "");
+        let n = 1;
+        while (seenCode.has(`${prefix}${n}`) || allCodes.has(`${prefix}${n}`)) n++;
+        code = `${prefix}${n}`;
+      }
+      if (code) seenCode.add(code);
+      return { ...e, code };
+    });
+    await copy("employees", staff);
     await copy("cmsPages", local.cmsPages);
     await copy("banners", local.banners);
     await copy("services", local.services);
