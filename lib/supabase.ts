@@ -6,7 +6,8 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
  * Server-side only: this key bypasses row-level security.
  */
 const URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+// SUPABASE_SECRET_KEY is the name the Vercel ↔ Supabase integration uses.
+const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
 
 export const BUCKET = process.env.SUPABASE_DOCUMENTS_BUCKET || "client-documents";
 
