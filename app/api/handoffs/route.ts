@@ -7,8 +7,8 @@ export const dynamic = "force-dynamic";
 /**
  * GET  /api/handoffs?status=pending&clientId=…   Admin: any. Employee: only for a client they hold.
  * POST /api/handoffs  { clientId, to, note }      to = employee email | "filed" | "unassigned" (Admin)
- *      Employee → creates a request that waits for manager approval.
- *      Admin    → moves the client straight away.
+ *      Employee → hands the client on immediately (DH → TP, TP → TR, TP → DH).
+ *      Admin    → reassigns the client.
  */
 export async function GET(req: Request) {
   let a;
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   if (!body?.clientId || body.to === undefined) return NextResponse.json({ ok: false, error: "Choose who to move the client to." }, { status: 400 });
   try {
     await requestMove(a, body.clientId, String(body.to), String(body.note ?? "").slice(0, 500));
-    return NextResponse.json({ ok: true, pending: !a.isSuper });
+    return NextResponse.json({ ok: true, pending: false });
   } catch (e) {
     const status = e instanceof WorkflowError ? e.status : 500;
     if (status === 500) console.error("[handoffs] move failed", e);

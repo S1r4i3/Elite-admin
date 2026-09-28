@@ -16,12 +16,12 @@ import {
 } from "./workflow-shared";
 
 /**
- * Client hand-offs between employees, approved by an Admin (manager).
+ * Client hand-offs between employees — immediate, no approval step.
  *
- *  requestMove  — the current holder asks to move a client on (DH → TP, TP → Reviewer, Reviewer → Filed, or back).
- *                 The client stays with them, marked "Awaiting manager approval".
- *  decideMove   — an Admin approves (client moves to the new person) or rejects (stays, reason shown).
- *  adminMove    — an Admin moves/assigns any client directly (recorded as an Admin move).
+ *  New clients are assigned to a Document Handler automatically by the database (wf_assign_new_client).
+ *  requestMove  — the current holder hands the client on (DH → TP, TP → TR, TP → DH). Applied at once.
+ *  runAction    — review / client / filing / IRS decisions (database function wf_transition).
+ *  adminMove    — an Admin reassigns a client (e.g. someone is away). Admins otherwise only monitor.
  *
  * Every step is written to public.client_handoffs — the audit trail.
  */
@@ -77,14 +77,13 @@ function resolveTarget(to: string, staff: StaffMember[]) {
   return { email: member.email, stage, member };
 }
 
-/** An employee asks the manager to move a client they hold. */
+/** An employee hands a client they hold on to the next person — applied immediately (no approval step). */
 export async function requestMove(a: Access, clientId: string, to: string, note = "") {
   if (!supabaseEnabled()) throw new WorkflowError("Hand-offs need the live Supabase connection.", 503);
   if (a.isSuper) return adminMove(a, clientId, to, note);
 
   const client = await loadClient(clientId);
   if ((client.assigned_to ?? "").toLowerCase() !== a.email) throw new WorkflowError("Only the person currently holding this client can move it.", 403);
-  if (client.pending_to || client.pending_stage) throw new WorkflowError("A move for this client is already waiting for manager approval.");
 
   const staff = await getStaff();
   const target = resolveTarget(to, staff);
@@ -96,56 +95,27 @@ export async function requestMove(a: Access, clientId: string, to: string, note 
   }
 
   const now = new Date().toISOString();
-  const { error: e1 } = await sb().from("client_handoffs").insert({
+  const { error: e1 } = await sb()
+    .from("profiles")
+    .update({ assigned_to: target.email, stage: target.stage, pending_to: null, pending_stage: null, pending_by: null, pending_note: null, pending_at: null, reject_reason: null })
+    .eq("id", clientId);
+  fail("move", e1);
+  const { error: e2 } = await sb().from("client_handoffs").insert({
     client_id: clientId,
     from_email: a.email,
     to_email: target.email,
     from_stage: client.stage,
     to_stage: target.stage,
-    status: "pending",
+    status: "auto",
+    action: "handoff",
     note: note || null,
     requested_by: a.email,
+    decided_by: a.email,
+    decided_at: now,
   });
-  fail("request", e1);
-  const { error: e2 } = await sb()
-    .from("profiles")
-    .update({ pending_to: target.email, pending_stage: target.stage, pending_by: a.email, pending_note: note || null, pending_at: now, reject_reason: null })
-    .eq("id", clientId);
-  fail("mark pending", e2);
+  fail("record move", e2);
   const codeOf = codeLookup(staff);
-  await log(a.email, "Requested move", `${clientName(client)} → ${target.stage === "closed" ? "Closed" : codeOf(target.email)}`);
-}
-
-/** Admin approves or rejects a pending hand-off. */
-export async function decideMove(a: Access, handoffId: string, approve: boolean, reason = "") {
-  if (!a.isSuper) throw new WorkflowError("Only a manager (Admin) can approve moves.", 403);
-  const { data: h, error } = await sb().from("client_handoffs").select("*").eq("id", handoffId).maybeSingle();
-  fail("load handoff", error);
-  if (!h) throw new WorkflowError("Request not found.", 404);
-  if (h.status !== "pending") throw new WorkflowError("This request was already decided.");
-  if (!approve && !reason.trim()) throw new WorkflowError("Please give a reason for rejecting.");
-
-  const client = await loadClient(h.client_id);
-  const now = new Date().toISOString();
-  const clear = { pending_to: null, pending_stage: null, pending_by: null, pending_note: null, pending_at: null };
-
-  if (approve) {
-    const holder = h.to_stage === "closed" || h.to_stage === "filed" ? client.assigned_to : h.to_email; // a closed client stays visible to its last holder
-    const { error: e1 } = await sb()
-      .from("profiles")
-      .update({ ...clear, assigned_to: holder, stage: h.to_stage, reject_reason: null })
-      .eq("id", h.client_id);
-    fail("apply move", e1);
-  } else {
-    const { error: e1 } = await sb().from("profiles").update({ ...clear, reject_reason: reason.trim() }).eq("id", h.client_id);
-    fail("reject move", e1);
-  }
-  const { error: e2 } = await sb()
-    .from("client_handoffs")
-    .update({ status: approve ? "approved" : "rejected", decided_by: a.email, decided_at: now, reason: reason.trim() || null })
-    .eq("id", handoffId);
-  fail("close request", e2);
-  await log(a.email, approve ? "Approved move" : "Rejected move", `${clientName(client)}${approve ? "" : ` — ${reason.trim()}`}`);
+  await log(a.email, "Moved client", `${clientName(client)} → ${codeOf(target.email)}`);
 }
 
 /** Admin assigns / moves a client directly (no approval needed). */
@@ -222,10 +192,10 @@ export async function listHandoffs(opts: { clientId?: string; status?: string; l
     toStage: h.to_stage,
     status: h.status,
     action: h.action ?? "",
-    actionLabel: h.action ? ACTION_LOG_LABEL[h.action as WfAction] ?? h.action : "",
+    actionLabel: h.action ? ACTION_LOG_LABEL[h.action] ?? h.action : "",
     note: h.note ?? "",
     reason: h.reason ?? "",
-    requestedBy: String(h.action ?? "").startsWith("client_") ? "the client" : codeOf(h.requested_by),
+    requestedBy: String(h.action ?? "").startsWith("client_") ? "the client" : h.requested_by === "system" ? "the system" : codeOf(h.requested_by),
     decidedBy: h.decided_by ? codeOf(h.decided_by) : "",
     createdAt: h.created_at,
     decidedAt: h.decided_at,
@@ -234,7 +204,9 @@ export async function listHandoffs(opts: { clientId?: string; status?: string; l
 
 /* ── Decisions: review / client / filing / IRS response ─────────────────────────── */
 
-const ACTION_LOG_LABEL: Record<WfAction, string> = {
+const ACTION_LOG_LABEL: Record<string, string> = {
+  handoff: "Handed over",
+  auto_assign: "Assigned automatically",
   review_approve: "Review approved",
   review_changes: "Reviewer requested changes",
   resubmit_review: "Corrections sent back to reviewer",

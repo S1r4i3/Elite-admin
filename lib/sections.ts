@@ -94,7 +94,7 @@ export const SECTIONS: Section[] = [
         type: "select",
         optionsFrom: "employees",
         superOnly: true,
-        hint: "Admin only. Assigns the client straight away (no approval) — use it for the first assignment to a Document Handler.",
+        hint: "Admin only. New clients are assigned to a Document Handler automatically — use this to reassign (e.g. someone is away).",
       },
     ],
   },

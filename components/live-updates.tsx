@@ -17,7 +17,7 @@ export const LIVE_EVENT = "ebt:live";
 
 const describe = (c: LiveChange) => {
   if (c.type === "DELETE") return null;
-  if (c.collection === "handoffs") return c.type === "INSERT" && c.kind === "pending" ? "New move request waiting for your approval" : null;
+  if (c.collection === "handoffs") return null;
   if (c.collection === "documents" && c.type === "INSERT") {
     const what = c.kind === "upload" ? "New client upload" : c.kind === "draft" ? "Draft shared" : "Final shared";
     return `${what}${c.name ? `: ${c.name}` : ""}`;

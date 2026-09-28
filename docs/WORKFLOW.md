@@ -14,7 +14,7 @@ The workflow is a **state machine stored in the database**:
 
 ```mermaid
 flowchart TD
-  C([Client registers + uploads]) --> DH
+  C([Client registers + uploads]) -- "auto-assigned (least-busy DH)" --> DH
 
   subgraph HAPPY["Main path"]
     DH["DH · Document Handler<br/>collect · verify · organize"]
@@ -25,8 +25,8 @@ flowchart TD
     IRS{"IRS / State<br/>response"}
     ACC["Accepted<br/>share final documents"]
     CL([Closed])
-    DH -- "move → TP (manager approves)" --> TP
-    TP -- "move → TR (manager approves)" --> TR
+    DH -- "move → TP" --> TP
+    TP -- "move → TR" --> TR
     TR -- "review_approve" --> CR
     CR -- "client_approve" --> TF
     TF -- "efile" --> IRS
@@ -46,7 +46,7 @@ flowchart TD
 
 | Stage | Held by | Meaning |
 |---|---|---|
-| `unassigned` | — | New client, Admin assigns a DH |
+| `unassigned` | — | Only if no Document Handler can sign in yet — assigned on first upload |
 | `documents` | DH | Collect / verify / organize documents (doc status pending → partial → received) |
 | `preparation` | TP | Prepare the return (also every rework: `rework_source` = review / client / irs) |
 | `review` | TR | QA / tax review |
@@ -60,9 +60,9 @@ flowchart TD
 
 | Action | From → To | Who | Path | Rule |
 |---|---|---|---|---|
-| move to TP | documents → preparation | DH | happy | Manager approves; doc status must be "received" |
-| move to TR | preparation → review | TP | happy | Manager approves |
-| move to DH | preparation → documents | TP | rework | Manager approves (missing documents) |
+| move to TP | documents → preparation | DH | happy | Immediate; doc status must be "received" |
+| move to TR | preparation → review | TP | happy | Immediate |
+| move to DH | preparation → documents | TP | rework | Immediate (missing documents) |
 | `review_approve` | review → client_review | TR | happy | A draft must be shared with the client |
 | `review_approve` | review → filing | TR | rework | When `correction = true` (IRS rejection) — skips client review |
 | `review_changes` | review → preparation | TR | rework | Reason required · back to the same TP |
@@ -74,4 +74,10 @@ flowchart TD
 | `irs_reject` | irs_pending → preparation | TF | rework | Reason required · sets `correction = true` |
 | `close` | accepted → closed | TF | happy | At least one final document must be shared |
 
-Admins can perform any action on any client and can reassign anyone at any time from **Move to**.
+**New clients** are assigned automatically to the least-busy active Document Handler who can sign in
+(database trigger `wf_assign_new_client`; a client registered before any DH existed is assigned on their first upload).
+
+**No approvals.** Every hand-off is immediate and recorded in the history.
+
+**Admins monitor.** They see every client, stage and history, but the staff member holding a client takes the
+actions. Admins can still reassign a client (e.g. someone is away, or no Tax Filer exists yet) from **Move to**.

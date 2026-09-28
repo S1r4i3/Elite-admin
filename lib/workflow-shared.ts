@@ -10,7 +10,8 @@
  *    Client "Request changes"      → TP → TR → Client review
  *    IRS/State rejected (correction) → TP → TR → TF (re-file, skips client review)
  *
- * Forward hand-offs (DH→TP, TP→TR, TP→DH) wait for manager approval.
+ * New clients go straight to a Document Handler (least busy). Hand-offs are immediate — no approvals.
+ * Admins monitor everything and can reassign; the staff member holding a client takes the actions.
  * Decisions (review, client, filing, IRS response) are applied by the database function
  * public.wf_transition, which enforces the rules in public.workflow_transitions.
  * A client is visible to exactly one employee at a time (the current holder) plus Admins.
@@ -172,6 +173,7 @@ export function availableActions(
   c: { stage?: string | null; assignedTo?: string | null; pendingTo?: string | null; pendingStage?: string | null; reworkSource?: string | null; correction?: boolean | null },
   me: { email: string; role: string; isSuper: boolean },
 ) {
+  if (me.isSuper) return []; // Admins monitor the workflow; the staff who hold the client act on it.
   if (c.pendingTo || c.pendingStage) return [];
   const holder = String(c.assignedTo ?? "").toLowerCase() === me.email.toLowerCase();
   if (!me.isSuper && !holder) return [];

@@ -72,16 +72,6 @@ export function Shell({
             </Link>
           </div>
 
-          {isSuper && (
-            <div className="nav-group">
-              <p className="nav-group-title">Workflow</p>
-              <Link href="/approvals" className={isActive("/approvals") ? "active" : ""}>
-                <span className="ico">✅</span>
-                <span style={{ flex: 1 }}>Approvals</span>
-                {!!counts.pendingApprovals && <span className="count">{counts.pendingApprovals}</span>}
-              </Link>
-            </div>
-          )}
 
           {NAV_GROUPS.filter((group) => SECTIONS.some((s) => s.group === group && (isSuper || !s.superOnly))).map((group) => (
             <div className="nav-group" key={group}>

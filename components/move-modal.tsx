@@ -8,8 +8,8 @@ type Target = { value: string; label: string };
 
 /**
  * "Move to" for one client.
- * Employees pick from the people their role may hand off to — the move then waits for manager approval.
- * Admins can move to anyone (or Filed / Unassigned) immediately.
+ * Employees pick from the people their role may hand off to. Every move is immediate.
+ * Admins can reassign to anyone (or Closed / Unassigned).
  */
 export function MoveModal({
   client,
@@ -84,7 +84,7 @@ export function MoveModal({
             <p className="hint" style={{ marginTop: 0 }}>
               {me.isSuper
                 ? "As an Admin, the client moves immediately. The move is recorded in the client's history."
-                : "Your manager must approve this move. Until then the client stays with you as “Awaiting manager approval”."}
+                : "The client moves to this person straight away and leaves your list. The move is recorded in the client's history."}
             </p>
           </>
         )}
@@ -98,7 +98,7 @@ export function MoveModal({
             Cancel
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy || targets.length === 0}>
-            {busy ? "…" : me.isSuper ? "Move now" : "Request move"}
+            {busy ? "…" : "Move now"}
           </button>
         </div>
       </form>

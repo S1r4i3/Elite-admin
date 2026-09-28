@@ -81,7 +81,7 @@ export function DataTable({
       columns: base.columns.filter((c) => isSuper || !c.superOnly),
       addLabel: !isSuper && base.collection === "clients" ? undefined : base.addLabel,
       title: !isSuper && base.collection === "clients" ? `My clients${me?.code ? ` — ${me.code}` : ""}` : base.title,
-      subtitle: !isSuper && base.collection === "clients" ? "Clients currently with you. Moving a client on needs your manager's approval." : base.subtitle,
+      subtitle: !isSuper && base.collection === "clients" ? "Clients currently with you. Hand a client on with “Move to” — it moves straight away." : base.subtitle,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base, isSuper, employees.join(",")]);
@@ -476,7 +476,7 @@ export function DataTable({
           onClose={() => setMoving(null)}
           onDone={async (pending) => {
             setMoving(null);
-            setNotice(pending ? "Move requested — waiting for manager approval." : "Client moved.");
+            setNotice("Client moved.");
             await load(true);
           }}
         />
