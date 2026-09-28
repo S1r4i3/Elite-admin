@@ -1,0 +1,144 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { availableActions, REWORK_LABEL, STAGES, STAGE_LABEL, type Stage, type WfActionDef } from "@/lib/workflow-shared";
+
+type WfClient = {
+  id: string;
+  stage?: string | null;
+  assignedTo?: string | null;
+  pendingTo?: string | null;
+  pendingStage?: string | null;
+  reworkSource?: string | null;
+  reworkReason?: string | null;
+  correction?: boolean;
+  filingCycle?: number;
+};
+
+/** Main (happy) path, in order — the loops are shown as a banner, not as extra steps. */
+const PATH: { stage: Stage; short: string; who: string }[] = [
+  { stage: "documents", short: "Documents", who: "DH" },
+  { stage: "preparation", short: "Preparation", who: "TP" },
+  { stage: "review", short: "Tax review", who: "TR" },
+  { stage: "client_review", short: "Client approval", who: "Client" },
+  { stage: "filing", short: "E-file", who: "TF" },
+  { stage: "irs_pending", short: "IRS / State", who: "TF" },
+  { stage: "accepted", short: "Final docs", who: "TF" },
+  { stage: "closed", short: "Closed", who: "" },
+];
+
+export function WorkflowPath({ client }: { client: WfClient }) {
+  const stage = (client.stage === "filed" ? "closed" : client.stage || "unassigned") as Stage;
+  const at = STAGES.indexOf(stage as (typeof STAGES)[number]);
+  return (
+    <div>
+      <ol className="wf-path" aria-label="Workflow progress">
+        {PATH.map((p) => {
+          const i = STAGES.indexOf(p.stage as (typeof STAGES)[number]);
+          const state = i < at ? "done" : i === at ? "current" : "todo";
+          return (
+            <li key={p.stage} className={`wf-step wf-${state}`} aria-current={state === "current" ? "step" : undefined}>
+              <span className="wf-dot">{state === "done" ? "✓" : ""}</span>
+              <span className="wf-name">{p.short}</span>
+              {p.who && <span className="wf-who">{p.who}</span>}
+            </li>
+          );
+        })}
+      </ol>
+      {client.reworkSource && (
+        <div className={`wf-banner ${client.reworkSource === "irs" ? "wf-banner-danger" : "wf-banner-warn"}`} role="status">
+          <strong>↺ {REWORK_LABEL[client.reworkSource] ?? "Rework"}</strong>
+          {client.reworkReason && <span>“{client.reworkReason}”</span>}
+          <small>
+            {client.reworkSource === "irs"
+              ? "Correction loop: Tax Preparer → Tax Reviewer → Tax Filer re-files (client review is skipped)."
+              : "Rework loop: Tax Preparer fixes → same Tax Reviewer checks again."}
+          </small>
+        </div>
+      )}
+      {!client.reworkSource && client.correction && stage === "review" && (
+        <div className="wf-banner wf-banner-danger" role="status">
+          <strong>↺ IRS / State correction</strong>
+          <small>After approval this goes straight back to the Tax Filer to re-file.</small>
+        </div>
+      )}
+      {(client.filingCycle ?? 0) > 1 && <p className="hint">Filed {client.filingCycle} times (includes re-filings).</p>}
+    </div>
+  );
+}
+
+export function WorkflowActions({ client, me }: { client: WfClient; me: { email: string; role: string; isSuper: boolean } }) {
+  const router = useRouter();
+  const actions = availableActions(client, me);
+  const [open, setOpen] = useState<WfActionDef | null>(null);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+
+  const run = async (def: WfActionDef) => {
+    if (def.noteLabel && !note.trim()) return setError("Please add a reason.");
+    setBusy(true);
+    setError(null);
+    const res = await fetch("/api/workflow", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ clientId: client.id, action: def.action, note }),
+    });
+    const json = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok || !json.ok) return setError(json.error || "Could not update the workflow.");
+    setOpen(null);
+    setNote("");
+    setDone(`Done — now: ${STAGE_LABEL[json.stage as Stage] ?? json.stage}`);
+    router.refresh();
+  };
+
+  if (client.stage === "client_review") {
+    return <p className="hint">Waiting for the client to approve or reject the draft in their dashboard. Their decision moves the case automatically.</p>;
+  }
+  if (actions.length === 0) return done ? <p className="hint">{done}</p> : null;
+
+  return (
+    <div className="wf-actions">
+      <div className="actions">
+        {actions.map((a) => (
+          <button
+            key={a.action}
+            type="button"
+            className={`btn btn-sm ${a.tone === "danger" ? "btn-danger" : a.tone === "primary" ? "btn-primary" : "btn-secondary"}`}
+            disabled={busy}
+            onClick={() => {
+              setError(null);
+              if (a.noteLabel) setOpen(open?.action === a.action ? null : a);
+              else if (confirm(`${a.label}?\n\n${a.hint}`)) void run(a);
+            }}
+          >
+            {a.label}
+          </button>
+        ))}
+      </div>
+      {open && (
+        <div className="field" style={{ marginTop: 12 }}>
+          <label htmlFor="wf-note">{open.noteLabel}</label>
+          <textarea id="wf-note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} placeholder={open.hint} />
+          <div className="actions" style={{ marginTop: 8 }}>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen(null)} disabled={busy}>
+              Cancel
+            </button>
+            <button type="button" className={`btn btn-sm ${open.tone === "danger" ? "btn-danger" : "btn-primary"}`} onClick={() => run(open)} disabled={busy}>
+              {busy ? "…" : "Confirm"}
+            </button>
+          </div>
+        </div>
+      )}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      {done && <p className="hint">{done}</p>}
+    </div>
+  );
+}

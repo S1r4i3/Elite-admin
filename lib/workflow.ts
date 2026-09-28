@@ -8,7 +8,10 @@ import {
   STAGE_FOR_ROLE,
   normalizeRole,
   prepLabel,
+  WF_ACTIONS,
+  STAGE_LABEL,
   type Stage,
+  type WfAction,
   type StaffMember,
 } from "./workflow-shared";
 
@@ -62,15 +65,15 @@ async function loadClient(clientId: string) {
 
 const clientName = (c: Record<string, string | null>) => [c.first_name, c.last_name].filter(Boolean).join(" ") || c.email || "client";
 
-/** Resolve a target ("filed", "unassigned" or an employee email) to { email, stage, role }. */
+/** Resolve a target ("closed", "unassigned" or an employee email) to { email, stage, role }. */
 function resolveTarget(to: string, staff: StaffMember[]) {
   const t = to.trim().toLowerCase();
-  if (t === "filed") return { email: null as string | null, stage: "filed" as Stage, member: null };
+  if (t === "closed" || t === "filed") return { email: null as string | null, stage: "closed" as Stage, member: null };
   if (t === "unassigned" || t === "") return { email: null, stage: "unassigned" as Stage, member: null };
   const member = staff.find((s) => s.email === t);
   if (!member) throw new WorkflowError("That employee doesn't exist or is inactive.");
   const stage = STAGE_FOR_ROLE[member.role];
-  if (!stage) throw new WorkflowError("Clients can only be moved to a Document Handler, Tax Preparer or Reviewer.");
+  if (!stage) throw new WorkflowError("Clients can only be moved to a Document Handler, Tax Preparer, Tax Reviewer or Tax Filer.");
   return { email: member.email, stage, member };
 }
 
@@ -86,7 +89,7 @@ export async function requestMove(a: Access, clientId: string, to: string, note 
   const staff = await getStaff();
   const target = resolveTarget(to, staff);
   const rules = MOVE_TARGETS[a.role];
-  const allowed = target.stage === "filed" ? !!rules?.filed : !!(target.member && rules?.roles.includes(target.member.role));
+  const allowed = !!(target.member && rules?.roles.includes(target.member.role));
   if (!allowed) throw new WorkflowError(`A ${a.role} can't move a client there.`);
   if (a.role === "Document Handler" && target.member?.role === "Tax Preparer" && client.doc_status !== "received") {
     throw new WorkflowError('Set Doc status to "Docs received" before moving this client to a Tax Preparer.');
@@ -110,7 +113,7 @@ export async function requestMove(a: Access, clientId: string, to: string, note 
     .eq("id", clientId);
   fail("mark pending", e2);
   const codeOf = codeLookup(staff);
-  await log(a.email, "Requested move", `${clientName(client)} → ${target.stage === "filed" ? "Filed" : codeOf(target.email)}`);
+  await log(a.email, "Requested move", `${clientName(client)} → ${target.stage === "closed" ? "Closed" : codeOf(target.email)}`);
 }
 
 /** Admin approves or rejects a pending hand-off. */
@@ -127,7 +130,7 @@ export async function decideMove(a: Access, handoffId: string, approve: boolean,
   const clear = { pending_to: null, pending_stage: null, pending_by: null, pending_note: null, pending_at: null };
 
   if (approve) {
-    const holder = h.to_stage === "filed" ? client.assigned_to : h.to_email; // filed stays visible to the reviewer who filed it
+    const holder = h.to_stage === "closed" || h.to_stage === "filed" ? client.assigned_to : h.to_email; // a closed client stays visible to its last holder
     const { error: e1 } = await sb()
       .from("profiles")
       .update({ ...clear, assigned_to: holder, stage: h.to_stage, reject_reason: null })
@@ -157,7 +160,7 @@ export async function adminMove(a: Access, clientId: string, to: string, note = 
   // Any request that was waiting is superseded by the Admin's decision.
   await sb().from("client_handoffs").update({ status: "cancelled", decided_by: a.email, decided_at: now, reason: "Superseded by an Admin move" }).eq("client_id", clientId).eq("status", "pending");
 
-  const holder = target.stage === "filed" ? client.assigned_to : target.email;
+  const holder = target.stage === "closed" ? client.assigned_to : target.email;
   const { error: e1 } = await sb()
     .from("profiles")
     .update({ assigned_to: holder, stage: target.stage, pending_to: null, pending_stage: null, pending_by: null, pending_note: null, pending_at: null, reject_reason: null })
@@ -177,7 +180,7 @@ export async function adminMove(a: Access, clientId: string, to: string, note = 
   });
   fail("record admin move", e2);
   const codeOf = codeLookup(staff);
-  await log(a.email, "Moved client", `${clientName(client)} → ${target.stage === "filed" ? "Filed" : target.stage === "unassigned" ? "Unassigned" : codeOf(target.email)}`);
+  await log(a.email, "Moved client", `${clientName(client)} → ${target.stage === "closed" ? "Closed" : target.stage === "unassigned" ? "Unassigned" : codeOf(target.email)}`);
 }
 
 export type HandoffView = {
@@ -189,6 +192,8 @@ export type HandoffView = {
   to: string;
   toStage: string;
   status: string;
+  action: string;
+  actionLabel: string;
   note: string;
   reason: string;
   requestedBy: string;
@@ -213,14 +218,50 @@ export async function listHandoffs(opts: { clientId?: string; status?: string; l
     clientName: [h.profiles?.first_name, h.profiles?.last_name].filter(Boolean).join(" ") || h.profiles?.email || "—",
     clientCode: h.profiles?.client_id ?? "",
     from: h.from_email ? codeOf(h.from_email) : "—",
-    to: h.to_stage === "filed" ? "Filed" : h.to_stage === "unassigned" ? "Unassigned" : codeOf(h.to_email),
+    to: h.to_email ? codeOf(h.to_email) : STAGE_LABEL[h.to_stage as Stage] ?? h.to_stage,
     toStage: h.to_stage,
     status: h.status,
+    action: h.action ?? "",
+    actionLabel: h.action ? ACTION_LOG_LABEL[h.action as WfAction] ?? h.action : "",
     note: h.note ?? "",
     reason: h.reason ?? "",
-    requestedBy: codeOf(h.requested_by),
+    requestedBy: String(h.action ?? "").startsWith("client_") ? "the client" : codeOf(h.requested_by),
     decidedBy: h.decided_by ? codeOf(h.decided_by) : "",
     createdAt: h.created_at,
     decidedAt: h.decided_at,
   }));
+}
+
+/* ── Decisions: review / client / filing / IRS response ─────────────────────────── */
+
+const ACTION_LOG_LABEL: Record<WfAction, string> = {
+  review_approve: "Review approved",
+  review_changes: "Reviewer requested changes",
+  resubmit_review: "Corrections sent back to reviewer",
+  client_approve: "Client approved the draft",
+  client_reject: "Client requested changes",
+  efile: "E-filed",
+  irs_accept: "IRS / State accepted",
+  irs_reject: "IRS / State rejected",
+  close: "Case closed",
+};
+
+/**
+ * Apply a workflow decision. The rules (who, from which stage, where it goes, who holds it next)
+ * are enforced in the database by public.wf_transition — this just calls it and logs the result.
+ */
+export async function runAction(a: Access, clientId: string, action: WfAction, note = "") {
+  if (!supabaseEnabled()) throw new WorkflowError("The workflow needs the live Supabase connection.", 503);
+  const def = WF_ACTIONS.find((w) => w.action === action);
+  if (!def) throw new WorkflowError("Unknown action.");
+  if (def.noteLabel && !note.trim()) throw new WorkflowError("Please add a reason.");
+  const client = await loadClient(clientId);
+  const { data, error } = await sb().rpc("wf_transition", { p_client: clientId, p_action: action, p_actor: a.email, p_note: note.trim() || null });
+  if (error) {
+    const msg = error.message.startsWith("WF: ") ? error.message.slice(4) : null;
+    if (msg) throw new WorkflowError(msg);
+    throw new Error(`[workflow] ${action}: ${error.message}`);
+  }
+  await log(a.email, ACTION_LOG_LABEL[action], `${clientName(client)}${note.trim() ? ` — ${note.trim()}` : ""}`);
+  return data as { ok: boolean; stage: string; assignedTo: string | null };
 }

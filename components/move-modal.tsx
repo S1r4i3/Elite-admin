@@ -30,13 +30,12 @@ export function MoveModal({
     if (me.isSuper) {
       return [
         ...staff.filter((s) => s.role !== "Admin" && s.email !== holder).map((s) => ({ value: s.email, label: label(s) })),
-        { value: "filed", label: "✔ Filed (complete)" },
+        { value: "closed", label: "✔ Closed (complete)" },
         { value: "unassigned", label: "Unassigned" },
       ];
     }
     const rules = MOVE_TARGETS[normalizeRole(me.role)];
     const list: Target[] = staff.filter((s) => rules?.roles.includes(s.role) && s.email !== me.email).map((s) => ({ value: s.email, label: label(s) }));
-    if (rules?.filed) list.push({ value: "filed", label: "✔ Filed (complete)" });
     return list;
   }, [client.assignedTo, me, staff]);
 

@@ -64,7 +64,7 @@ export const SECTIONS: Section[] = [
     search: ["firstName", "lastName", "email", "phone", "clientId", "holderCode", "prepStatus"],
     filters: [
       { key: "docStatus", label: "All doc statuses", options: ["pending", "partial", "received"] },
-      { key: "stage", label: "All stages", options: ["unassigned", "documents", "preparation", "review", "filed"] },
+      { key: "stage", label: "All stages", options: ["unassigned", "documents", "preparation", "review", "client_review", "filing", "irs_pending", "accepted", "closed"] },
     ],
     columns: [
       { key: "clientId", label: "Client ID", cell: "mono" },
@@ -345,7 +345,7 @@ export const SECTIONS: Section[] = [
     subtitle: "Staff who can access this panel",
     addLabel: "Add employee",
     search: ["name", "email", "role"],
-    filters: [{ key: "role", label: "All roles", options: ["Admin", "Document Handler", "Tax Preparer", "Reviewer"] }],
+    filters: [{ key: "role", label: "All roles", options: ["Admin", "Document Handler", "Tax Preparer", "Reviewer", "Tax Filer"] }],
     columns: [
       { key: "name", label: "Name", cell: "strong" },
       { key: "email", label: "Email" },
@@ -360,7 +360,7 @@ export const SECTIONS: Section[] = [
       { name: "email", label: "Email", type: "email", required: true, half: true },
       { name: "phone", label: "Phone", type: "tel", half: true },
       { name: "password", label: "Password", type: "password", required: true, half: true, hint: "At least 8 characters. When editing, leave blank to keep the current password." },
-      { name: "role", label: "Role", type: "select", options: ["Document Handler", "Tax Preparer", "Reviewer", "Admin"], half: true },
+      { name: "role", label: "Role", type: "select", options: ["Document Handler", "Tax Preparer", "Reviewer", "Tax Filer", "Admin"], half: true },
       { name: "code", label: "Queue code", half: true, hint: "Like DH1, TP1, RV1. Leave blank to generate it automatically." },
       { name: "status", label: "Status", type: "select", options: ["active", "inactive"], half: true },
     ],

@@ -31,7 +31,17 @@ export type Client = Row & {
   /** Email of the employee who currently holds this client (null/"" = unassigned). */
   assignedTo?: string | null;
   docStatus?: "pending" | "partial" | "received";
-  stage?: "unassigned" | "documents" | "preparation" | "review" | "filed";
+  stage?: "unassigned" | "documents" | "preparation" | "review" | "client_review" | "filing" | "irs_pending" | "accepted" | "closed" | "filed";
+  preparerEmail?: string | null;
+  reviewerEmail?: string | null;
+  filerEmail?: string | null;
+  reworkSource?: "review" | "client" | "irs" | null;
+  reworkReason?: string | null;
+  correction?: boolean;
+  filingCycle?: number;
+  efiledAt?: string | null;
+  irsDecidedAt?: string | null;
+  closedAt?: string | null;
   pendingTo?: string | null;
   pendingStage?: string | null;
   pendingBy?: string | null;
@@ -79,7 +89,7 @@ export type Employee = Row & {
   name: string;
   email: string;
   phone: string;
-  role: "Admin" | "Document Handler" | "Tax Preparer" | "Reviewer" | "Super Admin" | "Preparer" | "Associate";
+  role: "Admin" | "Document Handler" | "Tax Preparer" | "Reviewer" | "Tax Filer" | "Super Admin" | "Preparer" | "Associate";
   /** Short queue code, e.g. DH1, TP2, RV1. */
   code?: string;
   status: "active" | "inactive";

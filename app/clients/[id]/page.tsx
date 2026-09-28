@@ -7,6 +7,7 @@ import { DOC_STATUS_LABEL, STAGE_LABEL, type DocStatus, type Stage } from "@/lib
 import { get, list } from "@/lib/db";
 import { Badge } from "@/components/data-table";
 import { ClientDocuments } from "@/components/client-documents";
+import { WorkflowActions, WorkflowPath } from "@/components/workflow-actions";
 import type { Client, DocumentRow } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -90,6 +91,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       <div className="grid grid-2 mt-16">
         <div className="card card-pad">
           <h2 style={{ fontSize: 16, marginBottom: 14 }}>Workflow</h2>
+          <WorkflowPath client={wf} />
           <dl className="kv">
             <div>
               <dt>Stage</dt>
@@ -114,10 +116,11 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
               </div>
             ) : null}
           </dl>
+          <WorkflowActions client={wf} me={{ email: access.email, role: access.role, isSuper: access.isSuper }} />
         </div>
 
         <div className="card card-pad">
-          <h2 style={{ fontSize: 16, marginBottom: 6 }}>Hand-off history</h2>
+          <h2 style={{ fontSize: 16, marginBottom: 6 }}>Workflow history</h2>
           {history.length === 0 ? (
             <p className="muted" style={{ margin: 0 }}>
               No moves yet.
@@ -130,7 +133,9 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
                     {h.from} → {h.to}
                   </strong>
                   <small>
-                    {h.status === "pending"
+                    {h.status === "auto"
+                      ? `${h.actionLabel} by ${h.requestedBy}`
+                      : h.status === "pending"
                       ? `Requested by ${h.requestedBy} — awaiting approval`
                       : h.status === "approved"
                         ? `Requested by ${h.requestedBy}, approved by ${h.decidedBy}`
