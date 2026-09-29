@@ -5,7 +5,7 @@ import { WF_ACTIONS, type WfAction } from "@/lib/workflow-shared";
 
 export const dynamic = "force-dynamic";
 
-/** POST /api/workflow  { clientId, action, note? } — review / filing / IRS decisions for a client you hold (or any client, Admin). */
+/** POST /api/workflow  { clientId, action, note? } — review / client / filing decisions for a client you hold. */
 export async function POST(req: Request) {
   let a;
   try {

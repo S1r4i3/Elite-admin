@@ -30,7 +30,7 @@ export type Client = Row & {
   lastLoginAt?: string | null;
   /** Email of the employee who currently holds this client (null/"" = unassigned). */
   assignedTo?: string | null;
-  docStatus?: "pending" | "partial" | "received";
+  docStatus?: "pending" | "received";
   stage?: "unassigned" | "documents" | "preparation" | "review" | "client_review" | "filing" | "irs_pending" | "accepted" | "closed" | "filed";
   preparerEmail?: string | null;
   reviewerEmail?: string | null;

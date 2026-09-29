@@ -63,8 +63,8 @@ export const SECTIONS: Section[] = [
     addLabel: "Add client",
     search: ["firstName", "lastName", "email", "phone", "clientId", "holderCode", "prepStatus"],
     filters: [
-      { key: "docStatus", label: "All doc statuses", options: ["pending", "partial", "received"] },
-      { key: "stage", label: "All stages", options: ["unassigned", "documents", "preparation", "review", "client_review", "filing", "irs_pending", "accepted", "closed"] },
+      { key: "docStatus", label: "All doc statuses", options: ["pending", "received"] },
+      { key: "stage", label: "All stages", options: ["unassigned", "documents", "preparation", "review", "client_review", "filing", "accepted", "closed"] },
     ],
     columns: [
       { key: "clientId", label: "Client ID", cell: "mono" },
@@ -86,7 +86,7 @@ export const SECTIONS: Section[] = [
       { name: "country", label: "Country", half: true },
       { name: "taxYear", label: "Tax year", type: "select", options: YEARS, half: true },
       { name: "status", label: "Status", type: "select", options: ["active", "pending", "inactive"], half: true },
-      { name: "docStatus", label: "Doc status", type: "select", options: ["pending", "partial", "received"], half: true },
+      { name: "docStatus", label: "Doc status", type: "select", options: ["pending", "received"], half: true },
       { name: "address", label: "Address" },
       {
         name: "assignedTo",

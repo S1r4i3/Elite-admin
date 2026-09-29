@@ -20,7 +20,7 @@ import {
  *
  *  New clients are assigned to a Document Handler automatically by the database (wf_assign_new_client).
  *  requestMove  — the current holder hands the client on (DH → TP, TP → TR, TP → DH). Applied at once.
- *  runAction    — review / client / filing / IRS decisions (database function wf_transition).
+ *  runAction    — review / client / filing decisions (database function wf_transition).
  *  adminMove    — an Admin reassigns a client (e.g. someone is away). Admins otherwise only monitor.
  *
  * Every step is written to public.client_handoffs — the audit trail.
@@ -202,7 +202,7 @@ export async function listHandoffs(opts: { clientId?: string; status?: string; l
   }));
 }
 
-/* ── Decisions: review / client / filing / IRS response ─────────────────────────── */
+/* ── Decisions: review / client / filing ─────────────────────────────────────── */
 
 const ACTION_LOG_LABEL: Record<string, string> = {
   handoff: "Handed over",

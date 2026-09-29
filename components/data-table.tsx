@@ -29,7 +29,6 @@ const BADGE: Record<string, string> = {
   closed: "badge-muted",
 };
 const LABEL: Record<string, string> = {
-  partial: "Docs partially received",
   received: "Docs received",
   unassigned: STAGE_LABEL.unassigned,
   documents: STAGE_LABEL.documents,
@@ -37,7 +36,6 @@ const LABEL: Record<string, string> = {
   review: STAGE_LABEL.review,
   client_review: STAGE_LABEL.client_review,
   filing: STAGE_LABEL.filing,
-  irs_pending: STAGE_LABEL.irs_pending,
   accepted: STAGE_LABEL.accepted,
   filed: STAGE_LABEL.filed,
   awaiting_review: "Awaiting client review",
@@ -208,7 +206,7 @@ export function DataTable({
               ))}
             </select>
           );
-        return <span className={`badge ${ds === "received" ? "badge-ok" : ds === "partial" ? "badge-info" : "badge-warn"}`}>{DOC_STATUS_LABEL[ds] ?? ds}</span>;
+        return <span className={`badge ${ds === "received" ? "badge-ok" : "badge-warn"}`}>{DOC_STATUS_LABEL[ds] ?? ds}</span>;
       }
       case "prep": {
         const text = String(v || "—");

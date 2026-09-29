@@ -1,83 +1,82 @@
 # Elite B Tax — Tax Workflow
 
-The workflow is a **state machine stored in the database**:
+State machine stored in the database:
 
 * `public.profiles.stage` — where each client is now
-* `public.workflow_transitions` — every allowed decision (from stage → to stage, who may do it)
-* `public.wf_transition(client, action, actor, note)` — the only way a decision is applied;
-  it checks role, holder, stage and required documents, moves the client, and writes the audit row
-* `public.client_handoffs` — full history (hand-offs + decisions, `status = 'auto'` for decisions)
-* `preparer_email / reviewer_email / filer_email` — remembered per client so every loop returns to
-  **the same person** who worked that stage
+* `public.workflow_transitions` — every allowed decision (from → to, who may do it)
+* `public.wf_transition(client, action, actor, note)` — the only way a decision is applied
+  (checks role, holder, stage and required documents; moves the client; writes the history row)
+* `public.client_handoffs` — full history (hand-offs, decisions, automatic assignments)
+* `preparer_email / reviewer_email / filer_email` — remembered per client so rework returns to the **same person**
 
-## Diagram
+## Flow
 
-```mermaid
-flowchart TD
-  C([Client registers + uploads]) -- "auto-assigned (least-busy DH)" --> DH
-
-  subgraph HAPPY["Main path"]
-    DH["DH · Document Handler<br/>collect · verify · organize"]
-    TP["TP · Tax Preparer<br/>prepare return · calculations"]
-    TR["TR · Tax Reviewer<br/>QA / tax review"]
-    CR["Client review<br/>approve draft estimation"]
-    TF["TF · Tax Filer<br/>e-file return"]
-    IRS{"IRS / State<br/>response"}
-    ACC["Accepted<br/>share final documents"]
-    CL([Closed])
-    DH -- "move → TP" --> TP
-    TP -- "move → TR" --> TR
-    TR -- "review_approve" --> CR
-    CR -- "client_approve" --> TF
-    TF -- "efile" --> IRS
-    IRS -- "irs_accept" --> ACC
-    ACC -- "close (needs final doc)" --> CL
-  end
-
-  TR -. "review_changes (reason)" .-> TP
-  CR -. "client_reject (comment)" .-> TP
-  IRS -. "irs_reject (reason) · correction = true" .-> TP
-  TP -. "resubmit_review → same TR" .-> TR
-  TR -. "review_approve when correction = true<br/>(skips client review) → same TF re-files" .-> TF
-  TP -. "move → DH (missing documents)" .-> DH
+```
+CLIENT registers on the website
+   │   AUTOMATIC: assigned to the least-busy Document Handler who can sign in
+   ▼
+DH – Document Handler                         Stage: documents
+   • Client uploads documents (go straight to this DH)
+   • Collect / verify / organize
+   • Doc status: pending → received
+   • "Move to →" a Tax Preparer        (immediate, no approval)
+   ▼
+TP – Tax Preparer                             Stage: preparation
+   • Prepare return, calculations
+   • "Move to →" a Tax Reviewer        (immediate)
+   • (can send back to DH if documents are missing)
+   ▼
+TR – Tax Reviewer (RV1)                       Stage: review
+   • Uploads/shares the draft estimation with the client
+   • "Approve return"  ──────────────► CLIENT REVIEW
+   • "Request changes" (reason) ─────► back to the SAME TP  ↺
+   ▼
+CLIENT REVIEW (client dashboard)              Stage: client_review
+   • Client clicks "Approve"  ───────► TAX FILER (automatic)
+   • Client "Request changes" ───────► back to the SAME TP  ↺
+   ▼
+TF – Tax Filer                                Stage: filing
+   • "Mark as e-filed"
+   ▼
+ACCEPTED                                      Stage: accepted
+   • TF uploads final documents for the client
+   • "Close case"
+   ▼
+CLOSED  (end)                                 Stage: closed
 ```
 
-## Stages
-
-| Stage | Held by | Meaning |
-|---|---|---|
-| `unassigned` | — | Only if no Document Handler can sign in yet — assigned on first upload |
-| `documents` | DH | Collect / verify / organize documents (doc status pending → partial → received) |
-| `preparation` | TP | Prepare the return (also every rework: `rework_source` = review / client / irs) |
-| `review` | TR | QA / tax review |
-| `client_review` | TR (watching) | Draft shared, waiting for the client |
-| `filing` | TF | Ready to e-file (auto-assigned: remembered TF, else least-busy active Tax Filer) |
-| `irs_pending` | TF | E-filed, waiting for IRS / State |
-| `accepted` | TF | Accepted — upload final documents |
-| `closed` | last holder | Done |
+Rework: after "Request changes" (reviewer or client) the TP fixes it and clicks
+**"Corrections done → back to reviewer"**, which returns it to the same TR.
 
 ## Transitions
 
-| Action | From → To | Who | Path | Rule |
-|---|---|---|---|---|
-| move to TP | documents → preparation | DH | happy | Immediate; doc status must be "received" |
-| move to TR | preparation → review | TP | happy | Immediate |
-| move to DH | preparation → documents | TP | rework | Immediate (missing documents) |
-| `review_approve` | review → client_review | TR | happy | A draft must be shared with the client |
-| `review_approve` | review → filing | TR | rework | When `correction = true` (IRS rejection) — skips client review |
-| `review_changes` | review → preparation | TR | rework | Reason required · back to the same TP |
-| `resubmit_review` | preparation → review | TP | rework | Only during rework · back to the same TR, no approval needed |
-| `client_approve` | client_review → filing | Client | happy | From the client dashboard (approve draft) |
-| `client_reject` | client_review → preparation | Client | rework | Comment required · back to the same TP |
-| `efile` | filing → irs_pending | TF | happy | `filing_cycle + 1` |
-| `irs_accept` | irs_pending → accepted | TF | happy | Clears `correction` |
-| `irs_reject` | irs_pending → preparation | TF | rework | Reason required · sets `correction = true` |
-| `close` | accepted → closed | TF | happy | At least one final document must be shared |
+| Action | From → To | Who | Rule |
+|---|---|---|---|
+| auto-assign | (new client) → documents | system | Least-busy active DH who can sign in |
+| move to TP | documents → preparation | DH | Immediate; doc status must be "received" |
+| move to TR | preparation → review | TP | Immediate |
+| move to DH | preparation → documents | TP | Immediate (missing documents) |
+| `review_approve` | review → client_review | TR | A draft must be shared with the client |
+| `review_changes` | review → preparation | TR | Reason required · back to the same TP |
+| `resubmit_review` | preparation → review | TP | Only during rework · back to the same TR |
+| `client_approve` | client_review → filing | Client | Auto-assigns the Tax Filer |
+| `client_reject` | client_review → preparation | Client | Comment required · back to the same TP |
+| `efile` | filing → accepted | TF | |
+| `close` | accepted → closed | TF | At least one final document must be shared |
 
-**New clients** are assigned automatically to the least-busy active Document Handler who can sign in
-(database trigger `wf_assign_new_client`; a client registered before any DH existed is assigned on their first upload).
+## Client dashboard (7 steps)
 
-**No approvals.** Every hand-off is immediate and recorded in the history.
+1. Account created
+2. Documents uploaded
+3. Documents received by our team
+4. Tax return prepared
+5. Reviewed by a tax reviewer
+6. Draft approved by you
+7. Final documents delivered
 
-**Admins monitor.** They see every client, stage and history, but the staff member holding a client takes the
-actions. Admins can still reassign a client (e.g. someone is away, or no Tax Filer exists yet) from **Move to**.
+## Roles
+
+* **Admin** — monitors all clients, stages and history; takes no workflow actions; can reassign a client.
+* **Document Handler / Tax Preparer** — "Move to →" in the client list.
+* **Tax Reviewer / Tax Filer** — "Review →" / "Take action →" opens the client's workflow buttons.
+* An employee sees only the clients they currently hold (and those clients' documents).

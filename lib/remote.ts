@@ -162,7 +162,7 @@ function toColumns(coll: RemoteCollection, p: Record<string, any>) {
     set("status", p.status);
     set("service", p.service);
     set("tax_year", p.taxYear);
-    if (p.docStatus !== undefined && ["pending", "partial", "received"].includes(String(p.docStatus))) out.doc_status = p.docStatus;
+    if (p.docStatus !== undefined && ["pending", "received"].includes(String(p.docStatus))) out.doc_status = p.docStatus;
     if (p.assignedTo !== undefined) {
       const v = String(p.assignedTo ?? "").trim().toLowerCase();
       out.assigned_to = !v || v === "unassigned" ? null : v;

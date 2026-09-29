@@ -3,12 +3,11 @@
  *
  *  HAPPY PATH
  *    Client → DH (collect & verify docs) → TP (prepare) → TR (review) → Client review → TF (e-file)
- *      → IRS/State accepted → final documents → Closed
+ *      → Accepted (final documents) → Closed
  *
  *  REWORK LOOPS (always back to the same preparer, then the same reviewer)
- *    TR "Request changes"          → TP → TR
- *    Client "Request changes"      → TP → TR → Client review
- *    IRS/State rejected (correction) → TP → TR → TF (re-file, skips client review)
+ *    TR "Request changes"      → TP → TR
+ *    Client "Request changes"  → TP → TR → Client review
  *
  * New clients go straight to a Document Handler (least busy). Hand-offs are immediate — no approvals.
  * Admins monitor everything and can reassign; the staff member holding a client takes the actions.
@@ -48,7 +47,7 @@ export const ROLE_LABEL: Record<Role, string> = {
 
 export const STAGES = ["unassigned", "documents", "preparation", "review", "client_review", "filing", "irs_pending", "accepted", "closed"] as const;
 export type Stage = (typeof STAGES)[number] | "filed";
-export type DocStatus = "pending" | "partial" | "received";
+export type DocStatus = "pending" | "received";
 
 /** Which stage a client is in while a person with this role holds it. */
 export const STAGE_FOR_ROLE: Partial<Record<Role, Stage>> = {
@@ -65,15 +64,14 @@ export const STAGE_LABEL: Record<Stage, string> = {
   review: "In tax review",
   client_review: "Waiting for client approval",
   filing: "Ready to e-file",
-  irs_pending: "E-filed — waiting for IRS/State",
-  accepted: "Accepted — send final documents",
+  irs_pending: "E-filed — send final documents",
+  accepted: "E-filed — send final documents",
   closed: "Closed",
   filed: "Closed",
 };
 
 export const DOC_STATUS_LABEL: Record<DocStatus, string> = {
   pending: "Docs pending",
-  partial: "Docs partially received",
   received: "Docs received",
 };
 
@@ -91,8 +89,6 @@ export type WfAction =
   | "client_approve"
   | "client_reject"
   | "efile"
-  | "irs_accept"
-  | "irs_reject"
   | "close";
 
 export type WfActionDef = {
@@ -121,7 +117,7 @@ export const WF_ACTIONS: WfActionDef[] = [
     stage: "review",
     role: "Reviewer",
     label: "Approve return",
-    hint: "Normal return: goes to the client for approval (share the draft first). IRS correction: goes straight to the Tax Filer.",
+    hint: "Goes to the client for approval. Share the draft with the client first (Drafts → Upload).",
     tone: "primary",
   },
   {
@@ -138,25 +134,8 @@ export const WF_ACTIONS: WfActionDef[] = [
     stage: "filing",
     role: "Tax Filer",
     label: "Mark as e-filed",
-    hint: "The return has been transmitted to the IRS / state.",
+    hint: "The return has been transmitted. Next: upload the final documents for the client, then close.",
     tone: "primary",
-  },
-  {
-    action: "irs_accept",
-    stage: "irs_pending",
-    role: "Tax Filer",
-    label: "IRS / State accepted",
-    hint: "Next: upload the final documents for the client, then close.",
-    tone: "primary",
-  },
-  {
-    action: "irs_reject",
-    stage: "irs_pending",
-    role: "Tax Filer",
-    label: "IRS / State rejected",
-    hint: "Starts a correction: Tax Preparer → Tax Reviewer → you re-file (client review is skipped).",
-    tone: "danger",
-    noteLabel: "Rejection code / reason from the IRS or state",
   },
   {
     action: "close",
@@ -184,7 +163,6 @@ export function availableActions(
 export const REWORK_LABEL: Record<string, string> = {
   review: "Returned by Tax Reviewer",
   client: "Client requested changes",
-  irs: "IRS / State rejected — correction",
 };
 
 export type StaffMember = { email: string; name: string; role: Role; code: string };
@@ -218,15 +196,14 @@ export function prepLabel(
     case "preparation":
       return `With ${who} — preparing${rework}`;
     case "review":
-      return `With ${who} — tax review${c.correction ? " (IRS correction)" : ""}`;
+      return `With ${who} — tax review`;
     case "client_review":
       return "Waiting for client to approve the draft";
     case "filing":
-      return c.assignedTo ? `With ${who} — ready to ${c.correction ? "re-file" : "e-file"}` : "Ready to e-file — assign a Tax Filer";
+      return c.assignedTo ? `With ${who} — ready to e-file` : "Ready to e-file — assign a Tax Filer";
     case "irs_pending":
-      return `E-filed by ${who} — waiting for IRS/State`;
     case "accepted":
-      return `Accepted — ${who} to send final documents`;
+      return `E-filed — ${who} to send final documents`;
     default:
       return "Closed";
   }

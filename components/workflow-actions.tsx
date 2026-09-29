@@ -23,13 +23,12 @@ const PATH: { stage: Stage; short: string; who: string }[] = [
   { stage: "review", short: "Tax review", who: "TR" },
   { stage: "client_review", short: "Client approval", who: "Client" },
   { stage: "filing", short: "E-file", who: "TF" },
-  { stage: "irs_pending", short: "IRS / State", who: "TF" },
   { stage: "accepted", short: "Final docs", who: "TF" },
   { stage: "closed", short: "Closed", who: "" },
 ];
 
 export function WorkflowPath({ client }: { client: WfClient }) {
-  const stage = (client.stage === "filed" ? "closed" : client.stage || "unassigned") as Stage;
+  const stage = (client.stage === "filed" ? "closed" : client.stage === "irs_pending" ? "accepted" : client.stage || "unassigned") as Stage;
   const at = STAGES.indexOf(stage as (typeof STAGES)[number]);
   return (
     <div>
@@ -47,23 +46,12 @@ export function WorkflowPath({ client }: { client: WfClient }) {
         })}
       </ol>
       {client.reworkSource && (
-        <div className={`wf-banner ${client.reworkSource === "irs" ? "wf-banner-danger" : "wf-banner-warn"}`} role="status">
+        <div className="wf-banner wf-banner-warn" role="status">
           <strong>↺ {REWORK_LABEL[client.reworkSource] ?? "Rework"}</strong>
           {client.reworkReason && <span>“{client.reworkReason}”</span>}
-          <small>
-            {client.reworkSource === "irs"
-              ? "Correction loop: Tax Preparer → Tax Reviewer → Tax Filer re-files (client review is skipped)."
-              : "Rework loop: Tax Preparer fixes → same Tax Reviewer checks again."}
-          </small>
+          <small>Rework loop: Tax Preparer fixes → same Tax Reviewer checks again.</small>
         </div>
       )}
-      {!client.reworkSource && client.correction && stage === "review" && (
-        <div className="wf-banner wf-banner-danger" role="status">
-          <strong>↺ IRS / State correction</strong>
-          <small>After approval this goes straight back to the Tax Filer to re-file.</small>
-        </div>
-      )}
-      {(client.filingCycle ?? 0) > 1 && <p className="hint">Filed {client.filingCycle} times (includes re-filings).</p>}
     </div>
   );
 }
