@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Modal } from "./modal";
-import { MOVE_TARGETS, normalizeRole, type StaffMember } from "@/lib/workflow-shared";
+import { MOVE_TARGETS, normalizeRole, staffLabel, type StaffMember } from "@/lib/workflow-shared";
 
 type Target = { value: string; label: string };
 
@@ -26,7 +26,7 @@ export function MoveModal({
 }) {
   const targets = useMemo<Target[]>(() => {
     const holder = String(client.assignedTo || "").toLowerCase();
-    const label = (s: StaffMember) => `${s.code || "—"} · ${s.name} (${s.role})`;
+    const label = (s: StaffMember) => `${staffLabel(s)} — ${s.name}`;
     if (me.isSuper) {
       return [
         ...staff.filter((s) => s.role !== "Admin" && s.email !== holder).map((s) => ({ value: s.email, label: label(s) })),
@@ -97,12 +97,12 @@ export function MoveModal({
           </p>
         )}
         <div className="actions" style={{ justifyContent: "flex-end", marginTop: 14 }}>
-          <button type="button" className="btn btn-secondary" onClick={onClose}>
+          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={busy}>
             Cancel
           </button>
           {targets.length > 0 && (
-            <button type="submit" className="btn btn-primary" disabled={busy}>
-              {busy ? "…" : "Move now"}
+            <button type="submit" className="btn btn-primary" disabled={busy} aria-busy={busy}>
+              {busy ? <span className="spinner" /> : null} {busy ? "Moving…" : "Move now"}
             </button>
           )}
         </div>

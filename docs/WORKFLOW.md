@@ -76,7 +76,10 @@ Rework: after "Request changes" (reviewer or client) the TP fixes it and clicks
 
 ## Roles
 
-* **Admin** — monitors all clients, stages and history; takes no workflow actions; can reassign a client.
+* **Admin** — never part of the automatic flow (new clients go straight to a DH), but can step in anytime: every workflow button on any client (approve, request changes, e-file, close, and recording the client's approval or rejection given by phone/email) and moving any client to anyone. Every Admin step is recorded in the history.
+* Staff are shown as code + full role everywhere, e.g. `DH1 · Document Handler`, `TP1 · Tax Preparer`, `RV1 · Tax Reviewer`, `TF1 · Tax Filer`.
+* **Employees page** — current clients, total clients handled and moves per employee; click a name for their open clients and full move history.
+* **Uploads** — drafts / finals (admin) and client documents (website) go straight from the browser to Supabase Storage with a signed URL, so files up to 15 MB work on Vercel (its functions refuse bodies over ~4.5 MB).
 * **Document Handler / Tax Preparer** — "Move to →" in the client list.
 * **Tax Reviewer / Tax Filer** — "Review →" / "Take action →" opens the client's workflow buttons.
 * An employee sees only the clients they currently hold (and those clients' documents).

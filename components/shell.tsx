@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { SECTIONS, NAV_GROUPS } from "@/lib/sections";
 import { LiveUpdates } from "./live-updates";
+import { NavProgress } from "./nav-progress";
+import { staffLabel } from "@/lib/workflow-shared";
 
 type Counts = Partial<Record<string, number>>;
 
@@ -17,7 +19,7 @@ export function Shell({
   live = false,
 }: {
   children: React.ReactNode;
-  admin: { email: string; name?: string; role?: string };
+  admin: { email: string; name?: string; role?: string; code?: string };
   isSuper?: boolean;
   taxYear: string;
   live?: boolean;
@@ -50,6 +52,9 @@ export function Shell({
 
   return (
     <div className="shell">
+      <Suspense fallback={null}>
+        <NavProgress />
+      </Suspense>
       <aside className={`sidebar${open ? " open" : ""}`}>
         <div className="brand">
           <img className="logo-mark" src="/brand/ebt-mark.png" alt="Elite B Tax Services" width={320} height={162} />
@@ -104,7 +109,7 @@ export function Shell({
           <div className="sidebar-user">
             <strong>{admin.name || "Signed in"}</strong>
             <small>
-              {admin.role ? `${admin.role} · ` : ""}
+              {admin.role ? `${staffLabel({ code: admin.code, role: admin.role, name: admin.name })} · ` : ""}
               {admin.email}
             </small>
           </div>

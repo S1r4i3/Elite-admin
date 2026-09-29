@@ -16,7 +16,7 @@ export async function AdminPage({ children }: { children: React.ReactNode }) {
   const access = await pageAccess();
   const settings = await getSettings();
   return (
-    <Shell admin={{ email: access.email, name: access.name, role: access.role }} isSuper={access.isSuper} taxYear={settings.taxYear} live={isLive()}>
+    <Shell admin={{ email: access.email, name: access.name, role: access.role, code: access.code }} isSuper={access.isSuper} taxYear={settings.taxYear} live={isLive()}>
       {children}
     </Shell>
   );

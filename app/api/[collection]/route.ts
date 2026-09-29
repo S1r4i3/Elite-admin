@@ -4,7 +4,7 @@ import { forbidden, normalizeAssignee, requireAccess, scopeRows } from "@/lib/ac
 import { create, findEmployeeByEmail, list, log, nextClientId, nextEmployeeCode } from "@/lib/db";
 import { normalizeRole } from "@/lib/workflow-shared";
 import type { Client, Collection, Row } from "@/lib/types";
-import { adminMove, decorateClients } from "@/lib/workflow";
+import { adminMove, decorateClients, employeeStats } from "@/lib/workflow";
 import { supabaseEnabled } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +47,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ collecti
   if (collection === "clients") rows = await decorateClients(rows as Client[]);
 
   // Never send password hashes to the browser.
-  if (collection === "employees") rows = rows.map(({ passwordHash: _ignored, ...rest }) => rest as Row);
+  if (collection === "employees") {
+    const stats = await employeeStats().catch((e) => {
+      console.error("[employees] stats failed", e);
+      return new Map();
+    });
+    rows = rows.map(({ passwordHash: _ignored, ...rest }) => {
+      const s = stats.get(String(rest.email ?? "").toLowerCase());
+      return { ...rest, currentClients: s?.currentClients ?? 0, totalClients: s?.totalClients ?? 0, moves: s?.moves ?? 0 } as Row;
+    });
+  }
 
   return NextResponse.json({ ok: true, rows, total: rows.length });
 }

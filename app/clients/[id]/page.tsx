@@ -99,7 +99,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
             </div>
             <div>
               <dt>Currently with</dt>
-              <dd className="mono">{wf.holderCode || "Nobody"}</dd>
+              <dd>{wf.holderCode || "Nobody"}</dd>
             </div>
             <div>
               <dt>Doc status</dt>
@@ -142,7 +142,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
                         : h.status === "rejected"
                           ? `Rejected by ${h.decidedBy}: ${h.reason}`
                           : h.status === "admin"
-                            ? `Moved by ${h.requestedBy} (Admin)`
+                            ? `Moved by ${h.requestedBy}`
                             : `Cancelled — ${h.reason}`}
                     {h.note ? ` · “${h.note}”` : ""}
                   </small>

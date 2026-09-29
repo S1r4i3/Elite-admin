@@ -20,7 +20,7 @@ export type Field = {
 export type Column = {
   key: string;
   label: string;
-  cell?: "strong" | "badge" | "date" | "datetime" | "money" | "mono" | "size" | "client" | "tel" | "fullname" | "docstatus" | "prep";
+  cell?: "strong" | "badge" | "date" | "datetime" | "money" | "mono" | "size" | "client" | "tel" | "fullname" | "docstatus" | "prep" | "employee" | "role" | "count";
   sortable?: boolean;
   /** Only shown to a Super Admin. */
   superOnly?: boolean;
@@ -342,16 +342,17 @@ export const SECTIONS: Section[] = [
     collection: "employees",
     superOnly: true,
     title: "Employees",
-    subtitle: "Staff who can access this panel",
+    subtitle: "Staff, how many clients each one holds now and has handled in total. Click a name for their clients and move history.",
     addLabel: "Add employee",
     search: ["name", "email", "role"],
     filters: [{ key: "role", label: "All roles", options: ["Admin", "Document Handler", "Tax Preparer", "Reviewer", "Tax Filer"] }],
     columns: [
-      { key: "name", label: "Name", cell: "strong" },
+      { key: "name", label: "Name", cell: "employee" },
       { key: "email", label: "Email" },
       { key: "phone", label: "Phone", cell: "tel" },
-      { key: "code", label: "Code", cell: "mono" },
-      { key: "role", label: "Role" },
+      { key: "role", label: "Role", cell: "role" },
+      { key: "currentClients", label: "Current clients", cell: "count" },
+      { key: "totalClients", label: "Total clients", cell: "count" },
       { key: "status", label: "Status", cell: "badge" },
       { key: "createdAt", label: "Added", cell: "date" },
     ],

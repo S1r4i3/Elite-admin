@@ -10,7 +10,8 @@
  *    Client "Request changes"  → TP → TR → Client review
  *
  * New clients go straight to a Document Handler (least busy). Hand-offs are immediate — no approvals.
- * Admins monitor everything and can reassign; the staff member holding a client takes the actions.
+ * Admins are never part of the automatic flow, but can step in at any point: every workflow button
+ * (including recording the client's decision) and moving any client to anyone.
  * Decisions (review, client, filing, IRS response) are applied by the database function
  * public.wf_transition, which enforces the rules in public.workflow_transitions.
  * A client is visible to exactly one employee at a time (the current holder) plus Admins.
@@ -35,6 +36,12 @@ export const isAdminRole = (r: unknown) => normalizeRole(r) === "Admin";
 
 /** Short code prefix per role: DH1, TP1, RV1 (Tax Reviewer), TF1, AD1. */
 export const ROLE_PREFIX: Record<Role, string> = { Admin: "AD", "Document Handler": "DH", "Tax Preparer": "TP", Reviewer: "RV", "Tax Filer": "TF" };
+
+/** "DH1 · Document Handler" — code plus full role name, used everywhere a person is shown. */
+export const staffLabel = (s: { code?: string | null; role: string; name?: string | null; email?: string | null }) => {
+  const role = ROLE_LABEL[normalizeRole(s.role)];
+  return s.code ? `${s.code} · ${role}` : `${s.name || s.email || "—"} · ${role}`;
+};
 
 /** Friendly role names for screens. */
 export const ROLE_LABEL: Record<Role, string> = {
@@ -130,6 +137,23 @@ export const WF_ACTIONS: WfActionDef[] = [
     noteLabel: "What needs to change?",
   },
   {
+    action: "client_approve",
+    stage: "client_review",
+    role: "client",
+    label: "Client approved (record for client)",
+    hint: "Use when the client approved by phone or email. Moves the case to a Tax Filer.",
+    tone: "primary",
+  },
+  {
+    action: "client_reject",
+    stage: "client_review",
+    role: "client",
+    label: "Client wants changes (record for client)",
+    hint: "Returns the client to the same Tax Preparer with the client's notes.",
+    tone: "danger",
+    noteLabel: "What does the client want changed?",
+  },
+  {
     action: "efile",
     stage: "filing",
     role: "Tax Filer",
@@ -152,8 +176,9 @@ export function availableActions(
   c: { stage?: string | null; assignedTo?: string | null; pendingTo?: string | null; pendingStage?: string | null; reworkSource?: string | null; correction?: boolean | null },
   me: { email: string; role: string; isSuper: boolean },
 ) {
-  if (me.isSuper) return []; // Admins monitor the workflow; the staff who hold the client act on it.
   if (c.pendingTo || c.pendingStage) return [];
+  // Admins can take every action at the client's current stage, whoever holds it.
+  if (me.isSuper) return WF_ACTIONS.filter((a) => a.stage === c.stage && (!a.when || a.when(c)));
   const holder = String(c.assignedTo ?? "").toLowerCase() === me.email.toLowerCase();
   if (!me.isSuper && !holder) return [];
   const role = normalizeRole(me.role);

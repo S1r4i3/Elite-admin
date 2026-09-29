@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { availableActions, REWORK_LABEL, STAGES, STAGE_LABEL, type Stage, type WfActionDef } from "@/lib/workflow-shared";
 
@@ -64,10 +64,13 @@ export function WorkflowActions({ client, me }: { client: WfClient; me: { email:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const [running, setRunning] = useState<string | null>(null);
+  const [refreshing, startRefresh] = useTransition();
 
   const run = async (def: WfActionDef) => {
     if (def.noteLabel && !note.trim()) return setError("Please add a reason.");
     setBusy(true);
+    setRunning(def.action);
     setError(null);
     const res = await fetch("/api/workflow", {
       method: "POST",
@@ -76,34 +79,43 @@ export function WorkflowActions({ client, me }: { client: WfClient; me: { email:
     });
     const json = await res.json().catch(() => ({}));
     setBusy(false);
+    setRunning(null);
     if (!res.ok || !json.ok) return setError(json.error || "Could not update the workflow.");
     setOpen(null);
     setNote("");
     setDone(`Done — now: ${STAGE_LABEL[json.stage as Stage] ?? json.stage}`);
-    router.refresh();
+    startRefresh(() => router.refresh());
   };
+  const working = busy || refreshing;
 
-  if (client.stage === "client_review") {
-    return <p className="hint">Waiting for the client to approve or reject the draft in their dashboard. Their decision moves the case automatically.</p>;
-  }
-  if (actions.length === 0) return done ? <p className="hint">{done}</p> : null;
+  const waitingForClient =
+    client.stage === "client_review" ? (
+      <p className="hint">
+        Waiting for the client to approve or reject the draft in their dashboard. Their decision moves the case automatically.
+        {me.isSuper ? " If the client answered by phone or email, record it below." : ""}
+      </p>
+    ) : null;
+  if (actions.length === 0) return done ? <p className="hint">{done}</p> : waitingForClient;
 
   return (
     <div className="wf-actions">
+      {waitingForClient}
+      {me.isSuper && <p className="hint" style={{ marginTop: 0 }}>Admin: you can take any of these actions for the person holding this client.</p>}
       <div className="actions">
         {actions.map((a) => (
           <button
             key={a.action}
             type="button"
             className={`btn btn-sm ${a.tone === "danger" ? "btn-danger" : a.tone === "primary" ? "btn-primary" : "btn-secondary"}`}
-            disabled={busy}
+            disabled={working}
+            aria-busy={running === a.action}
             onClick={() => {
               setError(null);
               if (a.noteLabel) setOpen(open?.action === a.action ? null : a);
               else if (confirm(`${a.label}?\n\n${a.hint}`)) void run(a);
             }}
           >
-            {a.label}
+            {running === a.action && !open ? <span className="spinner" /> : null} {a.label}
           </button>
         ))}
       </div>
@@ -112,11 +124,11 @@ export function WorkflowActions({ client, me }: { client: WfClient; me: { email:
           <label htmlFor="wf-note">{open.noteLabel}</label>
           <textarea id="wf-note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} placeholder={open.hint} />
           <div className="actions" style={{ marginTop: 8 }}>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen(null)} disabled={busy}>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen(null)} disabled={working}>
               Cancel
             </button>
-            <button type="button" className={`btn btn-sm ${open.tone === "danger" ? "btn-danger" : "btn-primary"}`} onClick={() => run(open)} disabled={busy}>
-              {busy ? "…" : "Confirm"}
+            <button type="button" className={`btn btn-sm ${open.tone === "danger" ? "btn-danger" : "btn-primary"}`} onClick={() => run(open)} disabled={working}>
+              {working ? <span className="spinner" /> : null} {busy ? "Saving…" : refreshing ? "Updating…" : "Confirm"}
             </button>
           </div>
         </div>
@@ -126,7 +138,7 @@ export function WorkflowActions({ client, me }: { client: WfClient; me: { email:
           {error}
         </p>
       )}
-      {done && <p className="hint">{done}</p>}
+      {done && <p className="hint">{refreshing ? "Saved — updating the page…" : done}</p>}
     </div>
   );
 }

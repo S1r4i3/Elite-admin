@@ -442,3 +442,13 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .wf-banner-warn { background: var(--warn-bg); border: 1px solid #fde68a; color: var(--warn); }
 .wf-banner-danger { background: var(--danger-bg); border: 1px solid #fecaca; color: var(--danger); }
 .wf-actions { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+
+/* Instant feedback: top progress bar on navigation, upload progress, busy buttons */
+.nav-progress { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: var(--brand); z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.nav-progress.on { opacity: 1; animation: nav-grow 8s cubic-bezier(0.1, 0.7, 0.2, 1) forwards; }
+@keyframes nav-grow { from { width: 0; } to { width: 90%; } }
+.progress { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; margin: 10px 0 4px; }
+.progress > span { display: block; height: 100%; background: var(--brand); transition: width 0.2s; }
+.btn[aria-busy="true"] { cursor: progress; }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+select[aria-busy="true"] { opacity: 0.6; cursor: progress; }

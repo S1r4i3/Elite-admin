@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import type { Field, Section } from "@/lib/sections";
 import type { Client, Row } from "@/lib/types";
 import { Modal, FormModal, confirmDialog } from "./modal";
 import { UploadForm } from "./upload-form";
 import { LIVE_EVENT, type LiveChange } from "./live-updates";
 import { MoveModal } from "./move-modal";
-import { availableActions, DOC_STATUS_LABEL, MOVE_TARGETS, normalizeRole, STAGE_FOR_ROLE, STAGE_LABEL, type DocStatus, type StaffMember } from "@/lib/workflow-shared";
+import { availableActions, DOC_STATUS_LABEL, MOVE_TARGETS, normalizeRole, ROLE_LABEL, STAGE_FOR_ROLE, STAGE_LABEL, type DocStatus, type StaffMember } from "@/lib/workflow-shared";
 
 const fmtDate = (v: unknown) => (v ? new Date(String(v)).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "—");
 const fmtDateTime = (v: unknown) => (v ? new Date(String(v)).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—");
@@ -88,11 +89,20 @@ export function DataTable({
   const canWork = (row: Row) => isSuper || (!!me && String(row.assignedTo ?? "").toLowerCase() === me.email);
   const isPending = (row: Row) => Boolean(row.pendingTo || row.pendingStage);
 
+  const [savingId, setSavingId] = useState<string | null>(null);
   const setDocStatus = async (row: Row, docStatus: string) => {
+    // Show the new value at once; roll back if the server refuses.
+    const before = row.docStatus;
+    setSavingId(row.id);
+    setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, docStatus } : r)));
     const res = await fetch(`/api/clients/${row.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ docStatus }) });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.ok) setNotice(json.error || "Could not update the doc status.");
-    await load(true);
+    setSavingId(null);
+    if (!res.ok || !json.ok) {
+      setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, docStatus: before } : r)));
+      setNotice(json.error || "Could not update the doc status.");
+    } else setNotice("Doc status saved.");
+    void load(true);
   };
   const [rows, setRows] = useState<Row[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -188,17 +198,17 @@ export function DataTable({
         return <strong>{String(v ?? "—")}</strong>;
       case "fullname":
         return (
-          <a href={`/clients/${row.id}`}>
+          <Link href={`/clients/${row.id}`}>
             <strong>
               {String(row.firstName ?? "")} {String(row.lastName ?? "")}
             </strong>
-          </a>
+          </Link>
         );
       case "docstatus": {
         const ds = (String(v || "pending") as DocStatus);
         if (canWork(row))
           return (
-            <select className="select-sm" value={ds} onChange={(e) => setDocStatus(row, e.target.value)} aria-label="Doc status">
+            <select className="select-sm" value={ds} onChange={(e) => setDocStatus(row, e.target.value)} aria-label="Doc status" disabled={savingId === row.id} aria-busy={savingId === row.id}>
               {(Object.keys(DOC_STATUS_LABEL) as DocStatus[]).map((k) => (
                 <option key={k} value={k}>
                   {DOC_STATUS_LABEL[k]}
@@ -219,6 +229,18 @@ export function DataTable({
       }
       case "mono":
         return <span className="mono">{String(v ?? "—")}</span>;
+      case "employee":
+        return (
+          <Link href={`/employees/${row.id}`}>
+            <strong>{String(v ?? "—")}</strong>
+          </Link>
+        );
+      case "role": {
+        const label = ROLE_LABEL[normalizeRole(v)];
+        return row.code ? `${String(row.code)} · ${label}` : label;
+      }
+      case "count":
+        return <b>{Number(v ?? 0)}</b>;
       case "badge":
         return <Badge value={v} />;
       case "date":
@@ -376,27 +398,29 @@ export function DataTable({
                       <td>
                         <div className="row-actions">
                           {section.collection === "clients" && (
-                            <a className="btn btn-secondary btn-sm" href={`/clients/${r.id}`}>
+                            <Link className="btn btn-secondary btn-sm" href={`/clients/${r.id}`}>
                               View
-                            </a>
+                            </Link>
                           )}
                           {section.collection === "clients" && me && canWork(r) && (isSuper || !isPending(r)) && (() => {
                             // DH and TP hand clients on with "Move to"; Reviewers and Tax Filers decide on the client page.
+                            // Admins can do both: move anyone anywhere, and take any workflow action.
                             const role = normalizeRole(me.role);
                             const canMove = isSuper || (!!MOVE_TARGETS[role] && r.stage === STAGE_FOR_ROLE[role]);
-                            if (canMove) {
-                              return (
-                                <button className="btn btn-primary btn-sm" onClick={() => setMoving(r)}>
-                                  Move to →
-                                </button>
-                              );
-                            }
-                            const acts = availableActions(r as unknown as Client, me);
-                            if (acts.length === 0) return null;
+                            const acts = canMove && !isSuper ? [] : availableActions(r as unknown as Client, me);
                             return (
-                              <a className="btn btn-primary btn-sm" href={`/clients/${r.id}#workflow`} title={acts.map((a) => a.label).join(" · ")}>
-                                {role === "Reviewer" ? "Review →" : "Take action →"}
-                              </a>
+                              <>
+                                {acts.length > 0 && (
+                                  <Link className="btn btn-primary btn-sm" href={`/clients/${r.id}#workflow`} title={acts.map((a) => a.label).join(" · ")}>
+                                    {role === "Reviewer" ? "Review →" : "Take action →"}
+                                  </Link>
+                                )}
+                                {canMove && (
+                                  <button className={`btn btn-sm ${acts.length > 0 ? "btn-secondary" : "btn-primary"}`} onClick={() => setMoving(r)}>
+                                    Move to →
+                                  </button>
+                                )}
+                              </>
                             );
                           })()}
                           {section.collection === "documents" && (

@@ -10,6 +10,7 @@ import {
   prepLabel,
   WF_ACTIONS,
   STAGE_LABEL,
+  staffLabel,
   type Stage,
   type WfAction,
   type StaffMember,
@@ -21,7 +22,7 @@ import {
  *  New clients are assigned to a Document Handler automatically by the database (wf_assign_new_client).
  *  requestMove  — the current holder hands the client on (DH → TP, TP → TR, TP → DH). Applied at once.
  *  runAction    — review / client / filing decisions (database function wf_transition).
- *  adminMove    — an Admin reassigns a client (e.g. someone is away). Admins otherwise only monitor.
+ *  adminMove    — an Admin moves any client to anyone. Admins are never in the automatic flow but can step in anytime.
  *
  * Every step is written to public.client_handoffs — the audit trail.
  */
@@ -46,7 +47,7 @@ export async function getStaff(): Promise<StaffMember[]> {
 }
 
 export function codeLookup(staff: StaffMember[]) {
-  const map = new Map(staff.map((s) => [s.email, s.code || s.name || s.email]));
+  const map = new Map(staff.map((s) => [s.email, staffLabel(s)]));
   return (email?: string | null) => (email ? map.get(email.toLowerCase()) ?? email : "—");
 }
 
@@ -173,11 +174,15 @@ export type HandoffView = {
 };
 
 /** Hand-off history (optionally for one client, or only pending ones). */
-export async function listHandoffs(opts: { clientId?: string; status?: string; limit?: number } = {}): Promise<HandoffView[]> {
+export async function listHandoffs(opts: { clientId?: string; status?: string; limit?: number; email?: string } = {}): Promise<HandoffView[]> {
   if (!supabaseEnabled()) return [];
   let q = sb().from("client_handoffs").select("*, profiles(first_name,last_name,email,client_id)").order("created_at", { ascending: false }).limit(opts.limit ?? 200);
   if (opts.clientId) q = q.eq("client_id", opts.clientId);
   if (opts.status) q = q.eq("status", opts.status);
+  if (opts.email) {
+    const e = opts.email.toLowerCase().replace(/[^a-z0-9@._+-]/g, "");
+    q = q.or(`from_email.eq.${e},to_email.eq.${e},requested_by.eq.${e}`);
+  }
   const { data, error } = await q;
   fail("list handoffs", error);
   const codeOf = codeLookup(await getStaff());
@@ -195,7 +200,12 @@ export async function listHandoffs(opts: { clientId?: string; status?: string; l
     actionLabel: h.action ? ACTION_LOG_LABEL[h.action] ?? h.action : "",
     note: h.note ?? "",
     reason: h.reason ?? "",
-    requestedBy: String(h.action ?? "").startsWith("client_") ? "the client" : h.requested_by === "system" ? "the system" : codeOf(h.requested_by),
+    requestedBy:
+      h.requested_by === "system"
+        ? "the system"
+        : String(h.action ?? "").startsWith("client_")
+          ? codeOf(h.requested_by) === h.requested_by ? "the client" : `${codeOf(h.requested_by)} (for the client)`
+          : codeOf(h.requested_by),
     decidedBy: h.decided_by ? codeOf(h.decided_by) : "",
     createdAt: h.created_at,
     decidedAt: h.decided_at,
@@ -234,6 +244,48 @@ export async function runAction(a: Access, clientId: string, action: WfAction, n
     if (msg) throw new WorkflowError(msg);
     throw new Error(`[workflow] ${action}: ${error.message}`);
   }
-  await log(a.email, ACTION_LOG_LABEL[action], `${clientName(client)}${note.trim() ? ` — ${note.trim()}` : ""}`);
+  const onBehalf = a.isSuper && def.role === "client" ? " (recorded by Admin for the client)" : "";
+  await log(a.email, ACTION_LOG_LABEL[action] + onBehalf, `${clientName(client)}${note.trim() ? ` — ${note.trim()}` : ""}`);
   return data as { ok: boolean; stage: string; assignedTo: string | null };
+}
+
+/* ── Employee workload ─────────────────────────────────────────────────────── */
+
+export type EmployeeStats = { currentClients: number; totalClients: number; moves: number };
+
+/**
+ * Per employee (by email): clients they hold right now (not closed), how many different clients
+ * they have ever held, and how many moves / actions they made.
+ */
+export async function employeeStats(): Promise<Map<string, EmployeeStats>> {
+  const out = new Map<string, EmployeeStats>();
+  if (!supabaseEnabled()) return out;
+  const [{ data: clients, error: e1 }, { data: moves, error: e2 }] = await Promise.all([
+    sb().from("profiles").select("id, assigned_to, stage"),
+    sb().from("client_handoffs").select("client_id, to_email, requested_by").limit(20000),
+  ]);
+  fail("employee stats (clients)", e1);
+  fail("employee stats (moves)", e2);
+  const held = new Map<string, Set<string>>();
+  const get = (email: string) => {
+    if (!out.has(email)) out.set(email, { currentClients: 0, totalClients: 0, moves: 0 });
+    return out.get(email)!;
+  };
+  const mark = (email: string | null | undefined, clientId: string) => {
+    const e = String(email ?? "").toLowerCase();
+    if (!e) return;
+    if (!held.has(e)) held.set(e, new Set());
+    held.get(e)!.add(clientId);
+  };
+  for (const c of clients ?? []) {
+    mark(c.assigned_to, c.id);
+    if (c.assigned_to && c.stage !== "closed" && c.stage !== "filed") get(String(c.assigned_to).toLowerCase()).currentClients++;
+  }
+  for (const m of moves ?? []) {
+    mark(m.to_email, m.client_id);
+    const by = String(m.requested_by ?? "").toLowerCase();
+    if (by && by !== "system") get(by).moves++;
+  }
+  for (const [email, set] of held) get(email).totalClients = set.size;
+  return out;
 }

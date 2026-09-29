@@ -5,7 +5,7 @@ import { WF_ACTIONS, type WfAction } from "@/lib/workflow-shared";
 
 export const dynamic = "force-dynamic";
 
-/** POST /api/workflow  { clientId, action, note? } — review / client / filing decisions for a client you hold. */
+/** POST /api/workflow  { clientId, action, note? } — review / client / filing decisions (the holder, or an Admin for any client). */
 export async function POST(req: Request) {
   let a;
   try {
@@ -16,7 +16,6 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as { clientId?: string; action?: string; note?: string } | null;
   const action = WF_ACTIONS.find((w) => w.action === body?.action)?.action as WfAction | undefined;
   if (!body?.clientId || !action) return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 400 });
-  if (a.isSuper) return NextResponse.json({ ok: false, error: "Admins monitor the workflow — the staff member holding the client takes this action." }, { status: 403 });
   if (!(await canSeeClient(a, body.clientId))) return NextResponse.json({ ok: false, error: "You don't have access to this client." }, { status: 403 });
   try {
     const result = await runAction(a, body.clientId, action, String(body.note ?? "").slice(0, 1000));
