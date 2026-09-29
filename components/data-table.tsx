@@ -7,7 +7,7 @@ import { Modal, FormModal, confirmDialog } from "./modal";
 import { UploadForm } from "./upload-form";
 import { LIVE_EVENT, type LiveChange } from "./live-updates";
 import { MoveModal } from "./move-modal";
-import { DOC_STATUS_LABEL, STAGE_LABEL, type DocStatus, type StaffMember } from "@/lib/workflow-shared";
+import { availableActions, DOC_STATUS_LABEL, MOVE_TARGETS, normalizeRole, STAGE_FOR_ROLE, STAGE_LABEL, type DocStatus, type StaffMember } from "@/lib/workflow-shared";
 
 const fmtDate = (v: unknown) => (v ? new Date(String(v)).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "—");
 const fmtDateTime = (v: unknown) => (v ? new Date(String(v)).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—");
@@ -382,11 +382,25 @@ export function DataTable({
                               View
                             </a>
                           )}
-                          {section.collection === "clients" && me && canWork(r) && (isSuper || !isPending(r)) && (
-                            <button className="btn btn-primary btn-sm" onClick={() => setMoving(r)}>
-                              Move to →
-                            </button>
-                          )}
+                          {section.collection === "clients" && me && canWork(r) && (isSuper || !isPending(r)) && (() => {
+                            // DH and TP hand clients on with "Move to"; Reviewers and Tax Filers decide on the client page.
+                            const role = normalizeRole(me.role);
+                            const canMove = isSuper || (!!MOVE_TARGETS[role] && r.stage === STAGE_FOR_ROLE[role]);
+                            if (canMove) {
+                              return (
+                                <button className="btn btn-primary btn-sm" onClick={() => setMoving(r)}>
+                                  Move to →
+                                </button>
+                              );
+                            }
+                            const acts = availableActions(r as unknown as Client, me);
+                            if (acts.length === 0) return null;
+                            return (
+                              <a className="btn btn-primary btn-sm" href={`/clients/${r.id}#workflow`} title={acts.map((a) => a.label).join(" · ")}>
+                                {role === "Reviewer" ? "Review →" : "Take action →"}
+                              </a>
+                            );
+                          })()}
                           {section.collection === "documents" && (
                             <a className="btn btn-secondary btn-sm" href={`/api/files/${r.id}`}>
                               Download

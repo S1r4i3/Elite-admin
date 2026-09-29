@@ -64,7 +64,10 @@ export function MoveModal({
     <Modal title={`Move ${client.name}${client.clientId ? ` (${client.clientId})` : ""}`} onClose={onClose}>
       <form onSubmit={submit}>
         {targets.length === 0 ? (
-          <p className="muted">There is nobody you can move this client to yet. Ask an Admin to add staff with the right role.</p>
+          <p className="muted">
+            Clients at this stage aren&apos;t moved by hand. Open the client (View) and use the workflow buttons there: a Tax Reviewer
+            clicks &ldquo;Approve return&rdquo; or &ldquo;Request changes&rdquo;, a Tax Filer clicks &ldquo;Mark as e-filed&rdquo;.
+          </p>
         ) : (
           <>
             <div className="field">
@@ -97,9 +100,11 @@ export function MoveModal({
           <button type="button" className="btn btn-secondary" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="btn btn-primary" disabled={busy || targets.length === 0}>
-            {busy ? "…" : "Move now"}
-          </button>
+          {targets.length > 0 && (
+            <button type="submit" className="btn btn-primary" disabled={busy}>
+              {busy ? "…" : "Move now"}
+            </button>
+          )}
         </div>
       </form>
     </Modal>

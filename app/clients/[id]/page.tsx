@@ -89,7 +89,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       </div>
 
       <div className="grid grid-2 mt-16">
-        <div className="card card-pad">
+        <div className="card card-pad" id="workflow">
           <h2 style={{ fontSize: 16, marginBottom: 14 }}>Workflow</h2>
           <WorkflowPath client={wf} />
           <dl className="kv">
