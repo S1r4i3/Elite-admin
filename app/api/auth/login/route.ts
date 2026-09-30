@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { findEmployeeByEmail, log } from "@/lib/db";
 import { createSessionToken, sessionCookieOptions, sessionSecret, SESSION_COOKIE, verifyPassword } from "@/lib/auth";
 
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Incorrect email or password." }, { status: 401 });
   }
 
-  await log(employee.email, "Signed in");
+  after(() => log(employee.email, "Signed in")); // don't make the person wait for the log write
   if (!sessionSecret()) {
     return NextResponse.json({ ok: false, error: "Server setup problem: SESSION_SECRET is not set in the environment." }, { status: 500 });
   }

@@ -83,3 +83,13 @@ Rework: after "Request changes" (reviewer or client) the TP fixes it and clicks
 * **Document Handler / Tax Preparer** — "Move to →" in the client list.
 * **Tax Reviewer / Tax Filer** — "Review →" / "Take action →" opens the client's workflow buttons.
 * An employee sees only the clients they currently hold (and those clients' documents).
+
+## Guided uploads
+* Tax Reviewer clicks **Approve return** with no draft shared → a message explains a draft is needed and the "Share draft estimation" upload opens for that client; after the upload the return is approved automatically.
+* Tax Filer clicks **Mark as e-filed** → the "Share final document" upload opens straight away; then **Close case**.
+
+## Client dashboard (8 steps)
+Account created · Documents uploaded · Documents received by our team · Tax return prepared · Reviewed by a tax reviewer · Draft approved by you · Return e-filed successfully · Final documents delivered (only after e-filing).
+
+## Speed
+Both apps run their server functions in Vercel region `sin1` (vercel.json), next to the Supabase database (ap-southeast-1). Every database call was previously crossing from Washington (iad1) to Singapore.

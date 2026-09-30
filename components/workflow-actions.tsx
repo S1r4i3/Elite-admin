@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { UploadForm } from "./upload-form";
 import { availableActions, REWORK_LABEL, STAGES, STAGE_LABEL, type Stage, type WfActionDef } from "@/lib/workflow-shared";
 
 type WfClient = {
@@ -56,7 +57,16 @@ export function WorkflowPath({ client }: { client: WfClient }) {
   );
 }
 
-export function WorkflowActions({ client, me }: { client: WfClient; me: { email: string; role: string; isSuper: boolean } }) {
+export function WorkflowActions({
+  client,
+  me,
+  hasDraft = true,
+}: {
+  client: WfClient;
+  me: { email: string; role: string; isSuper: boolean };
+  /** A draft estimation is shared and waiting for the client (needed before "Approve return"). */
+  hasDraft?: boolean;
+}) {
   const router = useRouter();
   const actions = availableActions(client, me);
   const [open, setOpen] = useState<WfActionDef | null>(null);
@@ -66,6 +76,8 @@ export function WorkflowActions({ client, me }: { client: WfClient; me: { email:
   const [done, setDone] = useState<string | null>(null);
   const [running, setRunning] = useState<string | null>(null);
   const [refreshing, startRefresh] = useTransition();
+  // Upload that opens by itself: the draft before approving, the final documents after e-filing.
+  const [upload, setUpload] = useState<null | { kind: "draft" | "final"; intro: string; then?: WfActionDef }>(null);
 
   const run = async (def: WfActionDef) => {
     if (def.noteLabel && !note.trim()) return setError("Please add a reason.");
@@ -85,6 +97,22 @@ export function WorkflowActions({ client, me }: { client: WfClient; me: { email:
     setNote("");
     setDone(`Done — now: ${STAGE_LABEL[json.stage as Stage] ?? json.stage}`);
     startRefresh(() => router.refresh());
+    if (def.action === "efile") {
+      setUpload({ kind: "final", intro: "E-filed ✓ — now upload the final documents for the client. Then you can close the case." });
+    }
+  };
+
+  /** Approve needs a shared draft: if there isn't one, say so and open the draft upload first. */
+  const start = (def: WfActionDef) => {
+    if (def.action === "review_approve" && !hasDraft && !client.correction) {
+      setUpload({
+        kind: "draft",
+        intro: "Please share the draft estimation with the client first. Upload it here — the return is approved right after.",
+        then: def,
+      });
+      return;
+    }
+    if (confirm(`${def.label}?\n\n${def.hint}`)) void run(def);
   };
   const working = busy || refreshing;
 
@@ -95,7 +123,28 @@ export function WorkflowActions({ client, me }: { client: WfClient; me: { email:
         {me.isSuper ? " If the client answered by phone or email, record it below." : ""}
       </p>
     ) : null;
-  if (actions.length === 0) return done ? <p className="hint">{done}</p> : waitingForClient;
+  const uploadModal = upload ? (
+        <UploadForm
+          kind={upload.kind}
+          clientId={client.id}
+          intro={upload.intro}
+          onClose={() => setUpload(null)}
+          onDone={async () => {
+            const then = upload.then;
+            setUpload(null);
+            if (then) await run(then); // draft shared → approve the return now
+            else startRefresh(() => router.refresh());
+          }}
+        />
+  ) : null;
+
+  if (actions.length === 0)
+    return (
+      <>
+        {done ? <p className="hint">{done}</p> : waitingForClient}
+        {uploadModal}
+      </>
+    );
 
   return (
     <div className="wf-actions">
@@ -112,7 +161,7 @@ export function WorkflowActions({ client, me }: { client: WfClient; me: { email:
             onClick={() => {
               setError(null);
               if (a.noteLabel) setOpen(open?.action === a.action ? null : a);
-              else if (confirm(`${a.label}?\n\n${a.hint}`)) void run(a);
+              else start(a);
             }}
           >
             {running === a.action && !open ? <span className="spinner" /> : null} {a.label}
@@ -139,6 +188,7 @@ export function WorkflowActions({ client, me }: { client: WfClient; me: { email:
         </p>
       )}
       {done && <p className="hint">{refreshing ? "Saved — updating the page…" : done}</p>}
+      {uploadModal}
     </div>
   );
 }

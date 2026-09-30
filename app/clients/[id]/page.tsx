@@ -116,7 +116,11 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
               </div>
             ) : null}
           </dl>
-          <WorkflowActions client={wf} me={{ email: access.email, role: access.role, isSuper: access.isSuper }} />
+          <WorkflowActions
+            client={wf}
+            me={{ email: access.email, role: access.role, isSuper: access.isSuper }}
+            hasDraft={docs.some((d) => d.kind === "draft" && d.status === "awaiting_review")}
+          />
         </div>
 
         <div className="card card-pad">

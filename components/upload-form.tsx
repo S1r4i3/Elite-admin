@@ -35,9 +35,12 @@ export function UploadForm({
   clientId,
   onClose,
   onDone,
+  intro,
 }: {
   kind: "upload" | "draft" | "final";
   clientId?: string;
+  /** Message shown at the top, e.g. why this upload opened by itself. */
+  intro?: string;
   onClose: () => void;
   onDone: () => void | Promise<void>;
 }) {
@@ -114,6 +117,11 @@ export function UploadForm({
   return (
     <Modal title={title} onClose={busy ? () => {} : onClose}>
       <form onSubmit={submit}>
+        {intro && (
+          <div className="wf-banner wf-banner-warn" role="alert" style={{ marginBottom: 14 }}>
+            <strong>{intro}</strong>
+          </div>
+        )}
         <div className="field">
           <label htmlFor="u-client">Client</label>
           <select id="u-client" name="clientId" value={selected} onChange={(e) => setSelected(e.target.value)} required disabled={!!clientId}>

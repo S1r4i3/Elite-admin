@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { currentAdmin } from "./auth";
 import { findEmployeeByEmail, list } from "./db";
 import type { Client, Collection, DocumentRow, Row } from "./types";
@@ -15,14 +16,15 @@ export type Access = { id: string; email: string; name: string; role: Role; code
 /** Collections an employee (non Super Admin) can use. */
 export const EMPLOYEE_COLLECTIONS: Collection[] = ["clients", "documents"];
 
-export async function getAccess(): Promise<Access | null> {
+/** Cached per request, so a page and its layout share one lookup. */
+export const getAccess = cache(async function getAccess(): Promise<Access | null> {
   const session = await currentAdmin();
   if (!session) return null;
   const emp = await findEmployeeByEmail(session.email);
   if (!emp || emp.status !== "active") return null;
   const role = normalizeRole(emp.role);
   return { id: emp.id, email: emp.email.toLowerCase(), name: emp.name, role, code: emp.code || "", isSuper: isAdminRole(role) };
-}
+});
 
 /** Like getAccess() but throws a 401/403 Response for API routes. */
 export async function requireAccess(coll?: Collection): Promise<Access> {
