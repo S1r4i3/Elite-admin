@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function LoginForm() {
@@ -10,6 +10,11 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const next = params.get("next");
+    router.prefetch(next && next.startsWith("/") ? next : "/");
+  }, [router, params]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,11 +26,13 @@ function LoginForm() {
       body: JSON.stringify({ email, password }),
     });
     const json = await res.json().catch(() => ({}));
-    setBusy(false);
-    if (!res.ok || !json.ok) return setError(json.error || "Sign-in failed.");
+    if (!res.ok || !json.ok) {
+      setBusy(false);
+      return setError(json.error || "Sign-in failed.");
+    }
     const next = params.get("next");
-    router.replace(next && next.startsWith("/") ? next : "/");
-    router.refresh();
+    const dest = next && next.startsWith("/") ? next : "/";
+    window.location.assign(dest);
   };
 
   return (
@@ -49,7 +56,13 @@ function LoginForm() {
       )}
 
       <button className="btn btn-primary btn-block" type="submit" disabled={busy}>
-        {busy ? <span className="spinner" /> : null} Sign in
+        {busy ? (
+          <>
+            <span className="spinner" /> Signing in…
+          </>
+        ) : (
+          "Sign in"
+        )}
       </button>
       </form>
   );

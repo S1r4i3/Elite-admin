@@ -4,7 +4,6 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "./auth";
 import type { Client, Collection, DB, DocumentRow, Row, Settings } from "./types";
-import { SERVICES } from "./types";
 import { supabaseEnabled } from "./supabase";
 import {
   isRemote,
@@ -33,7 +32,7 @@ export const isLive = () => supabaseEnabled();
 /* ── One-time bootstrap of the admin tables in Supabase ───────────────────────
  * If Supabase has no employees yet:
  *  • a local data/db.json exists (your dev machine) → copy staff, settings, CMS, banners,
- *    prices, notes and logs into Supabase, so the deployed admin has the same logins;
+ *    notes and logs into Supabase, so the deployed admin has the same logins;
  *  • otherwise (a fresh Vercel deploy) → create the first Admin from ADMIN_EMAIL / ADMIN_PASSWORD.
  */
 let bootstrapped: Promise<void> | null = null;
@@ -82,7 +81,6 @@ async function bootstrap() {
     await copy("employees", staff);
     await copy("cmsPages", local.cmsPages);
     await copy("banners", local.banners);
-    await copy("services", local.services);
     await copy("taxNotes", local.taxNotes);
     await copy("logs", local.logs?.slice(0, 500));
     if (local.settings) await remoteSaveSettings(local.settings);
@@ -176,13 +174,6 @@ async function seed(): Promise<DB> {
       { id: randomUUID(), title: "Your Taxes. Done Right.", subtitle: "Professional tax preparation without the stress.", cta: "Get Started", link: "/get-started", active: "true", createdAt: iso(20) },
       { id: randomUUID(), title: "U.S. + India Tax Under One Roof", subtitle: "One team for both countries.", cta: "Indian Tax Services", link: "/indian-tax-services", active: "true", createdAt: iso(30) },
     ],
-    services: SERVICES.map((name, i) => ({
-      id: randomUUID(),
-      name,
-      price: [149, 99, 199, 129, 179, 299, 349, 279, 499, 249, 199, 229][i] ?? 199,
-      active: "true",
-      createdAt: iso(40 + i),
-    })),
     taxNotes: [
       { id: randomUUID(), title: "Standard deduction", body: "Confirm the current year's figures against IRS Pub 501 before filing.", createdAt: iso(12) },
       { id: randomUUID(), title: "FBAR deadline", body: "April 15, with an automatic extension to October 15.", createdAt: iso(25) },

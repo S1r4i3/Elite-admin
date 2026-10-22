@@ -10,7 +10,7 @@ import { supabaseEnabled } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-const ALLOWED: Collection[] = ["clients", "documents", "leads", "inquiries", "cmsPages", "banners", "services", "taxNotes", "employees", "logs"];
+const ALLOWED: Collection[] = ["clients", "documents", "leads", "inquiries", "cmsPages", "banners", "taxNotes", "employees", "logs"];
 const isAllowed = (c: string): c is Collection => (ALLOWED as string[]).includes(c);
 
 /** GET / PATCH / DELETE  /api/{collection}/{id} */

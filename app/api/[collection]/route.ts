@@ -9,7 +9,7 @@ import { supabaseEnabled } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-const ALLOWED: Collection[] = ["clients", "documents", "leads", "inquiries", "cmsPages", "banners", "services", "taxNotes", "employees", "logs"];
+const ALLOWED: Collection[] = ["clients", "documents", "leads", "inquiries", "cmsPages", "banners", "taxNotes", "employees", "logs"];
 const isAllowed = (c: string): c is Collection => (ALLOWED as string[]).includes(c);
 
 /**
@@ -17,7 +17,7 @@ const isAllowed = (c: string): c is Collection => (ALLOWED as string[]).includes
  * POST /api/{collection}
  *
  * Collections: clients, documents, leads, inquiries, cmsPages, banners,
- *              services, taxNotes, employees, logs
+ *              taxNotes, employees, logs
  */
 export async function GET(req: Request, { params }: { params: Promise<{ collection: string }> }) {
   const { collection } = await params;
@@ -107,4 +107,3 @@ export async function POST(req: Request, { params }: { params: Promise<{ collect
   await log(admin.email, `Created ${collection.replace(/s$/, "")}`, String(body.name || body.title || body.clientId || ""));
   return NextResponse.json({ ok: true, row }, { status: 201 });
 }
-

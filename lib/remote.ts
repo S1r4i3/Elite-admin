@@ -8,7 +8,7 @@ import type { Client, Collection, DocumentRow, Inquiry, Lead, Row, Settings } fr
  * always see the same rows. Everything else stays in data/db.json.
  */
 
-export const REMOTE_COLLECTIONS = ["clients", "documents", "leads", "inquiries", "employees", "cmsPages", "banners", "services", "taxNotes", "logs"] as const;
+export const REMOTE_COLLECTIONS = ["clients", "documents", "leads", "inquiries", "employees", "cmsPages", "banners", "taxNotes", "logs"] as const;
 export type RemoteCollection = (typeof REMOTE_COLLECTIONS)[number];
 export const isRemote = (c: Collection): c is RemoteCollection => (REMOTE_COLLECTIONS as readonly string[]).includes(c);
 
@@ -20,7 +20,6 @@ const TABLE: Record<RemoteCollection, string> = {
   employees: "employees",
   cmsPages: "cms_pages",
   banners: "banners",
-  services: "service_prices",
   taxNotes: "tax_notes",
   logs: "admin_logs",
 };
@@ -117,7 +116,6 @@ const MAP: Record<RemoteCollection, (r: any) => Row> = {
   employees: (r) => ({ ...stamps(r), name: r.name, email: r.email, phone: r.phone ?? "", role: r.role, status: r.status, code: r.code ?? "", passwordHash: r.password_hash ?? undefined }),
   cmsPages: (r) => ({ ...stamps(r), title: r.title, slug: r.slug, body: r.body ?? "" }),
   banners: (r) => ({ ...stamps(r), title: r.title, subtitle: r.subtitle ?? "", cta: r.cta ?? "", link: r.link ?? "", active: String(r.active) }),
-  services: (r) => ({ ...stamps(r), name: r.name, price: Number(r.price ?? 0), active: String(r.active) }),
   taxNotes: (r) => ({ ...stamps(r), title: r.title, body: r.body ?? "" }),
   logs: (r) => ({ ...stamps(r), who: r.who, action: r.action, detail: r.detail ?? "" }),
 };
@@ -127,7 +125,6 @@ const SIMPLE: Partial<Record<RemoteCollection, Record<string, string>>> = {
   employees: { name: "name", email: "email", phone: "phone", role: "role", status: "status", code: "code", passwordHash: "password_hash" },
   cmsPages: { title: "title", slug: "slug", body: "body" },
   banners: { title: "title", subtitle: "subtitle", cta: "cta", link: "link", active: "active" },
-  services: { name: "name", price: "price", active: "active" },
   taxNotes: { title: "title", body: "body" },
   logs: { who: "who", action: "action", detail: "detail" },
 };

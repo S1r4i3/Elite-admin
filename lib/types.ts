@@ -7,7 +7,6 @@ export type Collection =
   | "inquiries"
   | "cmsPages"
   | "banners"
-  | "services"
   | "taxNotes"
   | "employees"
   | "logs";
@@ -83,7 +82,6 @@ export type Lead = Row & {
 export type Inquiry = Row & { name: string; phone: string; message: string; page: string };
 export type CmsPage = Row & { title: string; slug: string; body: string };
 export type Banner = Row & { title: string; subtitle: string; cta: string; link: string; active: string };
-export type Service = Row & { name: string; price: number; active: string };
 export type TaxNote = Row & { title: string; body: string };
 export type Employee = Row & {
   name: string;
@@ -121,7 +119,6 @@ export type DB = {
   inquiries: Inquiry[];
   cmsPages: CmsPage[];
   banners: Banner[];
-  services: Service[];
   taxNotes: TaxNote[];
   employees: Employee[];
   logs: LogRow[];
