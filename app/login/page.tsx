@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import { apiJson } from "@/lib/api-client";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function LoginForm() {
@@ -18,18 +19,20 @@ function LoginForm() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.ok) {
+    try {
+      await apiJson("/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      }, 15_000);
+    } catch (err) {
       setBusy(false);
-      return setError(json.error || "Sign-in failed.");
+      return setError((err as Error).message || "Sign-in failed.");
     }
+    // Keep the button in its "Signing in…" state until the dashboard replaces this page.
     const next = params.get("next");
     const dest = next && next.startsWith("/") ? next : "/";
     window.location.assign(dest);
@@ -55,7 +58,7 @@ function LoginForm() {
         </p>
       )}
 
-      <button className="btn btn-primary btn-block" type="submit" disabled={busy}>
+      <button className="btn btn-primary btn-block" type="submit" disabled={busy} aria-busy={busy}>
         {busy ? (
           <>
             <span className="spinner" /> Signing in…

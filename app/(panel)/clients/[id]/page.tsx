@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdminPage, pageAccess } from "../../admin-layout";
+import { AdminPage, pageAccess } from "@/app/admin-layout";
 import { canSeeClient } from "@/lib/access";
 import { decorateClients, listHandoffs } from "@/lib/workflow";
 import { DOC_STATUS_LABEL, STAGE_LABEL, type DocStatus, type Stage } from "@/lib/workflow-shared";
-import { get, list } from "@/lib/db";
+import { get, listWhere } from "@/lib/db";
 import { Badge } from "@/components/data-table";
 import { ClientDocuments } from "@/components/client-documents";
 import { WorkflowActions, WorkflowPath } from "@/components/workflow-actions";
@@ -21,7 +21,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   // Employees can only open clients assigned to them.
   if (!client || !(await canSeeClient(access, client.id))) notFound();
   const [docs, [wf], history] = await Promise.all([
-    list<DocumentRow>("documents").then((all) => all.filter((d) => d.clientId === id)),
+    listWhere<DocumentRow>("documents", [{ field: "clientId", value: id }]), // only this client's rows, filtered in the database
     decorateClients([client]),
     listHandoffs({ clientId: id, limit: 50 }),
   ]);

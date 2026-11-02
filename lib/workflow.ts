@@ -1,3 +1,4 @@
+import { cache } from "react";
 import "server-only";
 import { sb, supabaseEnabled } from "./supabase";
 import { list, log } from "./db";
@@ -38,13 +39,14 @@ const fail = (where: string, error: { message: string } | null) => {
 };
 
 /** Active staff with their queue codes (DH1, TP1…). */
-export async function getStaff(): Promise<StaffMember[]> {
+/** Active staff, sorted by queue code. Deduplicated per request (React cache) — several helpers ask for it on one page. */
+export const getStaff = cache(async (): Promise<StaffMember[]> => {
   const employees = await list<Employee>("employees");
   return employees
     .filter((e) => e.status === "active")
     .map((e) => ({ email: e.email.toLowerCase(), name: e.name, role: normalizeRole(e.role), code: e.code || "" }))
     .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
-}
+});
 
 export function codeLookup(staff: StaffMember[]) {
   const map = new Map(staff.map((s) => [s.email, staffLabel(s)]));

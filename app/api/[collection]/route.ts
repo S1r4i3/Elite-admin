@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { hashPassword } from "@/lib/auth";
-import { forbidden, normalizeAssignee, requireAccess, scopeRows } from "@/lib/access";
-import { create, findEmployeeByEmail, list, log, nextClientId, nextEmployeeCode } from "@/lib/db";
+import { allowedClientIds, forbidden, normalizeAssignee, requireAccess, scopeRows } from "@/lib/access";
+import { clientNames, create, findEmployeeByEmail, list, listWhere, log, nextClientId, nextEmployeeCode } from "@/lib/db";
+import type { Where } from "@/lib/remote";
 import { normalizeRole } from "@/lib/workflow-shared";
 import type { Client, Collection, Row } from "@/lib/types";
 import { adminMove, decorateClients, employeeStats } from "@/lib/workflow";
@@ -30,10 +31,32 @@ export async function GET(req: Request, { params }: { params: Promise<{ collecti
   }
 
   const url = new URL(req.url);
-  // Employees only ever receive their own assigned clients and those clients' documents.
-  let rows = await scopeRows(access, collection, await list<Row>(collection));
+  // Clients and documents: filters and the employee's scope go to the database, so only the
+  // rows this person may see are transferred (previously every row was loaded, then filtered).
+  let rows: Row[];
+  if (collection === "clients" || collection === "documents") {
+    const where: Where = [];
+    if (collection === "documents") {
+      for (const key of ["kind", "status", "clientId"] as const) {
+        const v = url.searchParams.get(key);
+        if (v) where.push({ field: key, value: v });
+      }
+    }
+    const ids = await allowedClientIds(access);
+    if (ids && ids.size === 0) rows = [];
+    else {
+      if (ids) where.push({ field: collection === "clients" ? "id" : "clientId", op: "in", value: [...ids] });
+      rows = await listWhere<Row>(collection, where);
+    }
+    if (collection === "documents" && rows.length) {
+      const names = await clientNames([...new Set(rows.map((r) => String(r.clientId)))]);
+      rows = rows.map((r) => ({ ...r, clientName: names.get(String(r.clientId)) ?? "—" }));
+    }
+  } else {
+    rows = await scopeRows(access, collection, await list<Row>(collection));
+  }
 
-  // Simple server-side filters — extend as needed.
+  // Remaining simple filters — extend as needed.
   for (const key of ["kind", "status", "clientId", "taxYear", "role"]) {
     const v = url.searchParams.get(key);
     if (v) rows = rows.filter((r) => String(r[key] ?? "") === v);

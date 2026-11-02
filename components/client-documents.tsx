@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { apiJson } from "@/lib/api-client";
+import { toast } from "./toaster";
 import { useRouter } from "next/navigation";
 import type { DocumentRow } from "@/lib/types";
 import { Badge } from "./data-table";
@@ -56,7 +58,8 @@ export function ClientDocuments({ clientId, initial }: { clientId: string; initi
                   title="Delete"
                   onClick={() =>
                     confirmDialog("Delete this document?", async () => {
-                      await fetch(`/api/documents/${d.id}`, { method: "DELETE" });
+                      await apiJson(`/api/documents/${d.id}`, { method: "DELETE" });
+                      toast.success("Document deleted.");
                       router.refresh();
                     })
                   }

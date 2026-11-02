@@ -8,6 +8,11 @@ import { supabaseEnabled } from "./supabase";
 import {
   isRemote,
   remoteCount,
+  remoteCountWhere,
+  remoteListWhere,
+  remoteClientIdsFor,
+  remoteClientNames,
+  type Where,
   remoteCreate,
   remoteFindEmployee,
   remoteGet,
@@ -223,15 +228,24 @@ function mutate<T>(fn: (db: DB) => T | Promise<T>): Promise<T> {
 
 /* ── Public API ─────────────────────────────────────────── */
 
+// Settings change rarely but are read on every page: keep them for a minute per server instance.
+let settingsCache: { at: number; value: Promise<Settings> } | null = null;
+const SETTINGS_TTL = 60_000;
+
 export async function getSettings(): Promise<Settings> {
   if (supabaseEnabled()) {
-    await ready();
-    return remoteGetSettings(DEFAULT_SETTINGS());
+    if (!settingsCache || Date.now() - settingsCache.at > SETTINGS_TTL) {
+      const value = ready().then(() => remoteGetSettings(DEFAULT_SETTINGS()));
+      settingsCache = { at: Date.now(), value };
+      value.catch(() => (settingsCache = null));
+    }
+    return settingsCache.value;
   }
   return (await read()).settings;
 }
 
 export async function saveSettings(patch: Partial<Settings>) {
+  settingsCache = null;
   if (supabaseEnabled()) return remoteSaveSettings({ ...(await getSettings()), ...patch });
   return mutate((db) => {
     Object.assign(db.settings, patch);
@@ -246,6 +260,48 @@ export async function list<T extends Row>(coll: Collection): Promise<T[]> {
   }
   const db = await read();
   return [...(db[coll] as unknown as T[])].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+/** List with filters pushed to the database (falls back to filtering the local file in dev). */
+export async function listWhere<T extends Row>(coll: Collection, where: Where, opts: { limit?: number; columns?: string } = {}): Promise<T[]> {
+  if (live(coll) && isRemote(coll)) {
+    await ready();
+    return (await remoteListWhere(coll, where, opts)) as T[];
+  }
+  const rows = await list<T>(coll);
+  return rows.filter((r) =>
+    where.every((w) => {
+      const v = (r as Record<string, unknown>)[w.field];
+      if (w.op === "in") return (w.value as unknown[]).includes(v);
+      if (w.op === "gte") return String(v) >= String(w.value);
+      return String(v ?? "").toLowerCase() === String(w.value ?? "").toLowerCase();
+    }),
+  ).slice(0, opts.limit ?? 2000);
+}
+
+/** Count with filters, transferring no rows when live. */
+export async function countWhere(coll: Collection, where: Where = []): Promise<number> {
+  if (live(coll) && isRemote(coll)) {
+    await ready();
+    return remoteCountWhere(coll, where);
+  }
+  return (await listWhere(coll, where)).length;
+}
+
+/** Ids of the clients an employee holds. */
+export async function clientIdsFor(email: string): Promise<string[]> {
+  if (supabaseEnabled()) {
+    await ready();
+    return remoteClientIdsFor(email);
+  }
+  return (await listWhere<Client>("clients", [{ field: "assignedTo", value: email }])).map((c) => c.id);
+}
+
+/** Display names for a set of client ids. */
+export async function clientNames(ids: string[]): Promise<Map<string, string>> {
+  if (supabaseEnabled()) return remoteClientNames(ids);
+  const set = new Set(ids);
+  return new Map((await list<Client>("clients")).filter((c) => set.has(c.id)).map((c) => [c.id, `${c.firstName} ${c.lastName}`.trim()]));
 }
 
 export async function get<T extends Row>(coll: Collection, id: string): Promise<T | null> {
@@ -313,8 +369,43 @@ export async function findEmployeeByEmail(email: string) {
   return db.employees.find((e) => e.email.toLowerCase() === email.toLowerCase()) ?? null;
 }
 
+type Scope = { isSuper: boolean; email: string };
+export type Counts = { clients: number; uploads: number; draftsAwaiting: number; finals: number; newLeads: number; inquiries: number };
+export type Stats = Counts & {
+  pendingApprovals: number;
+  months: { label: string; key: string; n: number }[];
+  recentClients: DB["clients"];
+  recentInquiries: DB["inquiries"];
+  recentLogs: DB["logs"];
+  taxYear: string;
+  companyName: string;
+};
+
+/**
+ * Sidebar counters only. Live: six COUNT queries in parallel that transfer no rows
+ * (previously every page navigation downloaded every client, document, lead, inquiry and log row).
+ */
+export async function counts(scope: Scope): Promise<Counts> {
+  if (!supabaseEnabled()) {
+    const s: Stats = await stats(scope);
+    return { clients: s.clients, uploads: s.uploads, draftsAwaiting: s.draftsAwaiting, finals: s.finals, newLeads: s.newLeads, inquiries: s.inquiries };
+  }
+  const ids = scope.isSuper ? null : await clientIdsFor(scope.email);
+  const docs = (w: Where): Promise<number> => (ids && !ids.length ? Promise.resolve(0) : countWhere("documents", ids ? [...w, { field: "clientId", op: "in", value: ids }] : w));
+  const [uploads, draftsAwaiting, finals, newLeads, inquiries, clients] = await Promise.all([
+    docs([{ field: "kind", value: "upload" }]),
+    docs([{ field: "kind", value: "draft" }, { field: "status", value: "awaiting_review" }]),
+    docs([{ field: "kind", value: "final" }]),
+    scope.isSuper ? countWhere("leads", [{ field: "status", value: "new" }]) : Promise.resolve(0),
+    scope.isSuper ? countWhere("inquiries") : Promise.resolve(0),
+    ids ? Promise.resolve(ids.length) : countWhere("clients"),
+  ]);
+  return { clients, uploads, draftsAwaiting, finals, newLeads, inquiries };
+}
+
 /** Dashboard counters + the last 6 months of document activity. */
-export async function stats(scope?: { isSuper: boolean; email: string }) {
+export async function stats(scope?: Scope): Promise<Stats> {
+  if (supabaseEnabled() && scope) return remoteStats(scope);
   const local = supabaseEnabled()
     ? ({ settings: await getSettings(), logs: await list<DB["logs"][number]>("logs") } as Pick<DB, "settings" | "logs">)
     : await read();
@@ -369,4 +460,47 @@ export async function nextEmployeeCode(role: string) {
   let n = 1;
   while (used.includes(`${prefix}${n}`)) n++;
   return `${prefix}${n}`;
+}
+
+/**
+ * Live dashboard: counts + only the rows the page shows (6 recent clients, 5 inquiries, 6 log lines,
+ * document dates for the 6-month chart), all in parallel. Previously this loaded every row of six tables,
+ * including the whole activity log.
+ */
+async function remoteStats(scope: Scope): Promise<Stats> {
+  const months: { label: string; key: string; n: number }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i, 1);
+    months.push({ label: d.toLocaleString("en-US", { month: "short" }), key: `${d.getFullYear()}-${d.getMonth()}`, n: 0 });
+  }
+  const from = new Date();
+  from.setMonth(from.getMonth() - 5, 1);
+  from.setHours(0, 0, 0, 0);
+  const ids = scope.isSuper ? null : await clientIdsFor(scope.email);
+  const own = (w: Where): Where => (ids ? [...w, { field: "clientId", op: "in", value: ids }] : w);
+  const none = ids !== null && ids.length === 0;
+  const [settings, c, recentClients, chartDocs, recentInquiries, recentLogs] = await Promise.all([
+    getSettings(),
+    counts(scope),
+    ids ? (none ? Promise.resolve([]) : listWhere<DB["clients"][number]>("clients", [{ field: "id", op: "in", value: ids }], { limit: 6 })) : listWhere<DB["clients"][number]>("clients", [], { limit: 6 }),
+    none ? Promise.resolve([]) : listWhere<DB["documents"][number]>("documents", own([{ field: "createdAt", op: "gte", value: from.toISOString() }]), { columns: "id, created_at, customer_id, kind" }),
+    scope.isSuper ? listWhere<DB["inquiries"][number]>("inquiries", [], { limit: 5 }) : Promise.resolve([] as DB["inquiries"]),
+    scope.isSuper ? listWhere<DB["logs"][number]>("logs", [], { limit: 6 }) : Promise.resolve([] as DB["logs"]),
+  ]);
+  for (const doc of chartDocs) {
+    const d = new Date(doc.createdAt);
+    const m = months.find((x) => x.key === `${d.getFullYear()}-${d.getMonth()}`);
+    if (m) m.n++;
+  }
+  return {
+    ...c,
+    pendingApprovals: 0,
+    months,
+    recentClients,
+    recentInquiries,
+    recentLogs,
+    taxYear: settings.taxYear,
+    companyName: settings.companyName,
+  };
 }

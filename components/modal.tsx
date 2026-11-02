@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { Field } from "@/lib/sections";
+import { LoadingButton } from "./loading-button";
 
 export function Modal({
   title,
@@ -10,31 +11,34 @@ export function Modal({
   footer,
   wide,
   onClose,
+  locked = false,
 }: {
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
   wide?: boolean;
   onClose: () => void;
+  /** While a save is running the dialog can't be dismissed (Esc / backdrop / ✕). */
+  locked?: boolean;
 }) {
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !locked && onClose();
     document.addEventListener("keydown", onKey);
     document.documentElement.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
       document.documentElement.style.overflow = "";
     };
-  }, [onClose]);
+  }, [onClose, locked]);
 
   return (
     <>
-      <div className="backdrop" onClick={onClose} />
+      <div className="backdrop" onClick={locked ? undefined : onClose} />
       <div className="modal" role="dialog" aria-modal="true" aria-label={title}>
         <div className={`modal-card${wide ? " wide" : ""}`} onClick={(e) => e.stopPropagation()}>
           <div className="modal-head">
             <h2>{title}</h2>
-            <button className="icon-btn" style={{ marginLeft: "auto" }} onClick={onClose} aria-label="Close">
+            <button className="icon-btn" style={{ marginLeft: "auto" }} onClick={onClose} aria-label="Close" disabled={locked}>
               ✕
             </button>
           </div>
@@ -67,6 +71,7 @@ export function FormModal({
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (busy) return;
     const form = e.currentTarget;
     const data = Object.fromEntries(new FormData(form).entries()) as Record<string, string>;
     setBusy(true);
@@ -81,8 +86,9 @@ export function FormModal({
   };
 
   return (
-    <Modal title={title} wide={fields.length > 6} onClose={onClose}>
-      <form id="modal-form" onSubmit={submit}>
+    <Modal title={title} wide={fields.length > 6} onClose={onClose} locked={busy}>
+      <form id="modal-form" onSubmit={submit} aria-busy={busy}>
+        <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
         <div className="grid grid-2" style={{ gap: "0 14px" }}>
           {fields.map((f) => (
             <div className="field" key={f.name} style={f.half ? undefined : { gridColumn: "1 / -1" }}>
@@ -104,18 +110,19 @@ export function FormModal({
             </div>
           ))}
         </div>
+        </fieldset>
         {error && (
           <p className="error" role="alert">
             {error}
           </p>
         )}
         <div className="modal-foot" style={{ margin: "14px -20px -20px", borderRadius: 0 }}>
-          <button type="button" className="btn btn-secondary" onClick={onClose}>
+          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={busy}>
             Cancel
           </button>
-          <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? <span className="spinner" /> : null} {submitLabel}
-          </button>
+          <LoadingButton type="submit" className="btn btn-primary" loading={busy} loadingText="Saving…">
+            {submitLabel}
+          </LoadingButton>
         </div>
       </form>
     </Modal>
@@ -133,30 +140,44 @@ export function confirmDialog(message: string, onYes: () => Promise<void> | void
   };
   function Dialog() {
     const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     return (
       <Modal
         title="Please confirm"
         onClose={close}
+        locked={busy}
         footer={
           <>
-            <button className="btn btn-secondary" onClick={close}>
+            <button className="btn btn-secondary" onClick={close} disabled={busy}>
               Cancel
             </button>
-            <button
+            <LoadingButton
               className="btn btn-danger"
-              disabled={busy}
+              loading={busy}
+              loadingText="Deleting…"
               onClick={async () => {
                 setBusy(true);
-                await onYes();
-                close();
+                setError(null);
+                try {
+                  await onYes();
+                  close();
+                } catch (e) {
+                  setError((e as Error).message || "Something went wrong. Please try again.");
+                  setBusy(false);
+                }
               }}
             >
-              {busy ? <span className="spinner" /> : null} Delete
-            </button>
+              Delete
+            </LoadingButton>
           </>
         }
       >
         <p style={{ margin: 0 }}>{message}</p>
+        {error && (
+          <p className="error" role="alert" style={{ marginTop: 10 }}>
+            {error}
+          </p>
+        )}
       </Modal>
     );
   }

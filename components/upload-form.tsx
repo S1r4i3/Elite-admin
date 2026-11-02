@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiFetch, apiJson } from "@/lib/api-client";
+import { toast } from "./toaster";
 import { Modal } from "./modal";
 import type { Client } from "@/lib/types";
 import { taxYears } from "@/lib/types";
@@ -21,6 +23,9 @@ function putToStorage(url: string, file: File, onProgress: (p: number) => void) 
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(Math.round((e.loaded / e.total) * 100));
     xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`storage ${xhr.status}`)));
     xhr.onerror = () => reject(new Error("network"));
+    // Generous for 15 MB on a slow line, but a stalled upload always ends with a clear message.
+    xhr.timeout = 5 * 60_000;
+    xhr.ontimeout = () => reject(new Error("The upload timed out. Check your connection and try again."));
     xhr.send(body);
   });
 }
@@ -52,14 +57,14 @@ export function UploadForm({
 
   useEffect(() => {
     if (clientId) return; // opened from a client page — no need for the full list
-    fetch("/api/clients", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((j) => j.ok && setClients(j.rows))
-      .catch(() => {});
+    apiJson<{ rows: Client[] }>("/api/clients", { cache: "no-store" })
+      .then((j) => setClients(j.rows))
+      .catch((e) => setError(`Couldn't load the client list: ${(e as Error).message}`));
   }, [clientId]);
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (busy) return;
     const form = new FormData(e.currentTarget);
     form.set("kind", kind);
     const file = form.get("file") as File | null;
@@ -72,7 +77,7 @@ export function UploadForm({
     setProgress(0);
     try {
       // 1) ask for a one-time upload URL
-      const sign = await fetch("/api/uploads/sign", {
+      const sign = await apiFetch("/api/uploads/sign", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ clientId: target, name: file.name, size: file.size }),
@@ -82,7 +87,7 @@ export function UploadForm({
       if (sign.ok && s.ok) {
         // 2) send the file straight to storage, 3) record it
         await putToStorage(s.signedUrl, file, setProgress);
-        res = await fetch("/api/uploads", {
+        res = await apiFetch("/api/uploads", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
@@ -96,13 +101,14 @@ export function UploadForm({
           }),
         });
       } else if (sign.status === 501 || (!s.error && file.size <= API_BODY_LIMIT)) {
-        res = await fetch("/api/uploads", { method: "POST", body: form }); // local / small-file fallback
+        res = await apiFetch("/api/uploads", { method: "POST", body: form }, 120_000); // local / small-file fallback
       } else {
         throw new Error(s.error || "Could not start the upload.");
       }
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) throw new Error(json.error || (res.status === 413 ? "File is too large." : "Upload failed."));
       setProgress(100);
+      toast.success(kind === "draft" ? "Draft shared with the client." : kind === "final" ? "Final document shared." : "Document uploaded.");
       await onDone();
     } catch (err) {
       const msg = (err as Error).message;
@@ -115,7 +121,7 @@ export function UploadForm({
   const title = kind === "draft" ? "Share draft estimation" : kind === "final" ? "Share final document" : "Upload client document";
 
   return (
-    <Modal title={title} onClose={busy ? () => {} : onClose}>
+    <Modal title={title} onClose={onClose} locked={busy}>
       <form onSubmit={submit}>
         {intro && (
           <div className="wf-banner wf-banner-warn" role="alert" style={{ marginBottom: 14 }}>

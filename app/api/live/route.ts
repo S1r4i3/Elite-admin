@@ -1,4 +1,4 @@
-import { allowedClientIds, requireAccess } from "@/lib/access";
+import { freshClientIds, requireAccess } from "@/lib/access";
 import { subscribe, liveStatus, type LiveEvent } from "@/lib/live";
 import { supabaseEnabled } from "@/lib/supabase";
 
@@ -14,9 +14,9 @@ export async function GET(req: Request) {
     return r as Response;
   }
   // Employees only get events for the clients assigned to them.
-  let allowed = await allowedClientIds(access);
+  let allowed = await freshClientIds(access);
   const refreshAllowed = async () => {
-    allowed = await allowedClientIds(access);
+    allowed = await freshClientIds(access);
   };
   const visible = async (e: LiveEvent) => {
     if (allowed === null) return true;

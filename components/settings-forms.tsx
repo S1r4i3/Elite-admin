@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { apiJson } from "@/lib/api-client";
+import { toast } from "./toaster";
 import { useRouter } from "next/navigation";
 import type { Settings } from "@/lib/types";
 import { taxYears } from "@/lib/types";
@@ -33,14 +35,20 @@ function Form({ title, fields, initial }: { title: string; fields: FieldDef[]; i
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (busy) return;
     const data = Object.fromEntries(new FormData(e.currentTarget).entries());
     setBusy(true);
     setMsg(null);
-    const res = await fetch("/api/settings", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(data) });
-    const json = await res.json().catch(() => ({}));
-    setBusy(false);
-    setMsg(res.ok && json.ok ? { ok: true, text: "Saved." } : { ok: false, text: json.error || "Could not save." });
-    if (res.ok) router.refresh();
+    try {
+      await apiJson("/api/settings", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(data) });
+      setMsg({ ok: true, text: "Saved." });
+      toast.success(`${title} saved.`);
+      router.refresh();
+    } catch (err) {
+      setMsg({ ok: false, text: (err as Error).message || "Could not save." });
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -65,8 +73,8 @@ function Form({ title, fields, initial }: { title: string; fields: FieldDef[]; i
         ))}
       </div>
       <div className="flex">
-        <button className="btn btn-primary" disabled={busy}>
-          {busy ? <span className="spinner" /> : null} Save
+        <button className="btn btn-primary" disabled={busy} aria-busy={busy}>
+          {busy ? <><span className="spinner" aria-hidden /> Saving…</> : "Save"}
         </button>
         {msg && <span style={{ color: msg.ok ? "var(--ok)" : "var(--danger)", fontSize: 14 }}>{msg.text}</span>}
       </div>

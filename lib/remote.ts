@@ -323,6 +323,64 @@ export async function remoteCount(coll: RemoteCollection) {
   return count ?? 0;
 }
 
+/** Filters in app field names (camelCase) — translated to columns so the database does the filtering. */
+export type Where = { field: string; op?: "eq" | "in" | "gte"; value: unknown }[];
+
+const COLUMN: Partial<Record<RemoteCollection, Record<string, string>>> = {
+  clients: { assignedTo: "assigned_to", stage: "stage", id: "id" },
+  documents: { clientId: "customer_id", kind: "kind", status: "status", id: "id", createdAt: "created_at" },
+  leads: { status: "status" },
+};
+
+function applyWhere<Q>(q: Q, coll: RemoteCollection, where: Where): Q {
+  let out = q as unknown as { eq: (c: string, v: unknown) => unknown; in: (c: string, v: unknown[]) => unknown; gte: (c: string, v: unknown) => unknown };
+  for (const w of where) {
+    const col = COLUMN[coll]?.[w.field];
+    if (!col) throw new Error(`[supabase] no column mapping for ${coll}.${w.field}`);
+    const op = w.op ?? "eq";
+    out = (op === "in" ? out.in(col, w.value as unknown[]) : op === "gte" ? out.gte(col, w.value) : out.eq(col, w.value)) as typeof out;
+  }
+  return out as unknown as Q;
+}
+
+/** Filtered list, newest first. `columns` limits what is transferred (default all). */
+export async function remoteListWhere(coll: RemoteCollection, where: Where, opts: { limit?: number; columns?: string } = {}): Promise<Row[]> {
+  let q = sb().from(TABLE[coll]).select(opts.columns ?? "*").order("created_at", { ascending: false }).limit(opts.limit ?? 2000);
+  q = applyWhere(q, coll, where);
+  const { data, error } = await q;
+  fail(`list ${coll} (filtered)`, error);
+  return ((data ?? []) as unknown[]).map(MAP[coll]);
+}
+
+/** Row count without transferring any rows. */
+export async function remoteCountWhere(coll: RemoteCollection, where: Where = []) {
+  let q = sb().from(TABLE[coll]).select("id", { count: "exact", head: true });
+  q = applyWhere(q, coll, where);
+  const { count, error } = await q;
+  fail(`count ${coll} (filtered)`, error);
+  return count ?? 0;
+}
+
+/** Ids of the clients one employee holds — ids only, one indexed query. */
+export async function remoteClientIdsFor(email: string) {
+  const { data, error } = await sb().from("profiles").select("id").eq("assigned_to", email.toLowerCase());
+  fail("client ids for holder", error);
+  return (data ?? []).map((r: { id: string }) => r.id);
+}
+
+/** id → "First Last" for a set of clients (used to label document rows without loading every client). */
+export async function remoteClientNames(ids: string[]) {
+  if (!ids.length) return new Map<string, string>();
+  const { data, error } = await sb().from("profiles").select("id, first_name, last_name, email").in("id", ids);
+  fail("client names", error);
+  return new Map(
+    (data ?? []).map((r: { id: string; first_name: string | null; last_name: string | null; email: string | null }) => [
+      r.id,
+      [r.first_name, r.last_name].filter(Boolean).join(" ") || r.email || "—",
+    ]),
+  );
+}
+
 /** Bulk insert (used once to move the local data/db.json into Supabase). */
 export async function remoteImport(coll: RemoteCollection, rows: Record<string, unknown>[]) {
   if (!rows.length) return;

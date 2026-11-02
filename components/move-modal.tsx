@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { apiJson } from "@/lib/api-client";
 import { Modal } from "./modal";
 import { MOVE_TARGETS, normalizeRole, staffLabel, type StaffMember } from "@/lib/workflow-shared";
 
@@ -46,22 +47,25 @@ export function MoveModal({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!to) return;
+    if (!to || busy) return;
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/handoffs", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ clientId: client.id, to, note }),
-    });
-    const json = await res.json().catch(() => ({}));
-    setBusy(false);
-    if (!res.ok || !json.ok) return setError(json.error || "Could not move the client.");
-    onDone(Boolean(json.pending));
+    try {
+      const json = await apiJson<{ pending?: boolean }>("/api/handoffs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ clientId: client.id, to, note }),
+      });
+      onDone(Boolean(json.pending));
+    } catch (err) {
+      setError((err as Error).message || "Could not move the client.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
-    <Modal title={`Move ${client.name}${client.clientId ? ` (${client.clientId})` : ""}`} onClose={onClose}>
+    <Modal title={`Move ${client.name}${client.clientId ? ` (${client.clientId})` : ""}`} onClose={onClose} locked={busy}>
       <form onSubmit={submit}>
         {targets.length === 0 ? (
           <p className="muted">

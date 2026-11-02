@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdminPage, pageAccess } from "../../admin-layout";
+import { AdminPage, pageAccess } from "@/app/admin-layout";
 import { decorateClients, employeeStats, listHandoffs } from "@/lib/workflow";
 import { ROLE_LABEL, STAGE_LABEL, normalizeRole, staffLabel, type Stage } from "@/lib/workflow-shared";
-import { get, list } from "@/lib/db";
+import { get, listWhere } from "@/lib/db";
 import { Badge } from "@/components/data-table";
 import type { Client, Employee } from "@/lib/types";
 
@@ -20,7 +20,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
   const email = emp.email.toLowerCase();
   const [stats, clients, history] = await Promise.all([
     employeeStats(),
-    list<Client>("clients").then((all) => decorateClients(all.filter((c) => String(c.assignedTo ?? "").toLowerCase() === email))),
+    listWhere<Client>("clients", [{ field: "assignedTo", value: email }]).then(decorateClients),
     listHandoffs({ email, limit: 300 }),
   ]);
   const s = stats.get(email) ?? { currentClients: 0, totalClients: 0, moves: 0 };

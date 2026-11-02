@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AdminPage, pageAccess } from "./admin-layout";
+import { AdminPage, pageAccess } from "@/app/admin-layout";
 import { stats } from "@/lib/db";
 
 export const dynamic = "force-dynamic";

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { apiJson } from "@/lib/api-client";
+import { toast } from "./toaster";
 import { useRouter } from "next/navigation";
 import { UploadForm } from "./upload-form";
 import { availableActions, REWORK_LABEL, STAGES, STAGE_LABEL, type Stage, type WfActionDef } from "@/lib/workflow-shared";
@@ -81,18 +83,27 @@ export function WorkflowActions({
 
   const run = async (def: WfActionDef) => {
     if (def.noteLabel && !note.trim()) return setError("Please add a reason.");
+    if (busy) return;
     setBusy(true);
     setRunning(def.action);
     setError(null);
-    const res = await fetch("/api/workflow", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ clientId: client.id, action: def.action, note }),
-    });
-    const json = await res.json().catch(() => ({}));
-    setBusy(false);
-    setRunning(null);
-    if (!res.ok || !json.ok) return setError(json.error || "Could not update the workflow.");
+    let json: { stage?: string };
+    try {
+      json = await apiJson<{ stage?: string }>("/api/workflow", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ clientId: client.id, action: def.action, note }),
+      });
+    } catch (e) {
+      const msg = (e as Error).message || "Could not update the workflow.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    } finally {
+      setBusy(false);
+      setRunning(null);
+    }
+    toast.success(`${def.label} — done.`);
     setOpen(null);
     setNote("");
     setDone(`Done — now: ${STAGE_LABEL[json.stage as Stage] ?? json.stage}`);
@@ -164,7 +175,7 @@ export function WorkflowActions({
               else start(a);
             }}
           >
-            {running === a.action && !open ? <span className="spinner" /> : null} {a.label}
+            {running === a.action && !open ? <span className={`spinner${a.tone === "danger" || a.tone === "primary" ? "" : " dark"}`} aria-hidden /> : null} {a.label}
           </button>
         ))}
       </div>

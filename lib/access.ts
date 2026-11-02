@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { currentAdmin } from "./auth";
-import { findEmployeeByEmail, list } from "./db";
+import { clientIdsFor, findEmployeeByEmail } from "./db";
 import type { Client, Collection, DocumentRow, Row } from "./types";
 import { isAdminRole, normalizeRole, type Role } from "./workflow-shared";
 
@@ -40,10 +40,17 @@ export const forbidden = () =>
 export const canUseCollection = (a: Access, coll: Collection) => a.isSuper || EMPLOYEE_COLLECTIONS.includes(coll);
 
 /** Client ids this admin may see — null means "all" (Super Admin). */
+/** Ids of the clients this person holds (one indexed, ids-only query; cached per request). */
+const idsForRequest = cache(async (email: string) => new Set(await clientIdsFor(email)));
 export async function allowedClientIds(a: Access): Promise<Set<string> | null> {
   if (a.isSuper) return null;
-  const clients = await list<Client>("clients");
-  return new Set(clients.filter((c) => String(c.assignedTo ?? "").toLowerCase() === a.email).map((c) => c.id));
+  return idsForRequest(a.email);
+}
+
+/** Uncached variant for long-lived streams (assignments change while the stream is open). */
+export async function freshClientIds(a: Access): Promise<Set<string> | null> {
+  if (a.isSuper) return null;
+  return new Set(await clientIdsFor(a.email));
 }
 
 export async function canSeeClient(a: Access, clientId: string) {

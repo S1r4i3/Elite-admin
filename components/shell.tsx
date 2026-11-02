@@ -2,11 +2,16 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { SECTIONS, NAV_GROUPS } from "@/lib/sections";
 import { LiveUpdates } from "./live-updates";
 import { NavProgress } from "./nav-progress";
 import { staffLabel } from "@/lib/workflow-shared";
+import { apiFetch } from "@/lib/api-client";
+import { toast } from "./toaster";
+
+/** Sidebar badges are refreshed at most this often on navigation (live events refresh immediately). */
+const COUNTS_TTL_MS = 20_000;
 
 type Counts = Partial<Record<string, number>>;
 
@@ -30,22 +35,44 @@ export function Shell({
   const [counts, setCounts] = useState<Counts>({});
   const [busy, setBusy] = useState(false);
 
-  const loadCounts = useCallback(() => {
-    fetch("/api/stats", { cache: "no-store" })
+  const lastLoad = useRef(0);
+  const inFlight = useRef(false);
+
+  // Badge counts only (server does COUNT(*) head queries — no rows transferred).
+  const loadCounts = useCallback((force = false) => {
+    if (inFlight.current) return;
+    if (!force && Date.now() - lastLoad.current < COUNTS_TTL_MS) return;
+    inFlight.current = true;
+    apiFetch("/api/stats?counts=1", { cache: "no-store" }, 10_000)
       .then((r) => (r.ok ? r.json() : null))
-      .then((j) => j?.stats && setCounts(j.stats))
-      .catch(() => {});
+      .then((j) => {
+        if (j?.stats) {
+          setCounts(j.stats);
+          lastLoad.current = Date.now();
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        inFlight.current = false;
+      });
   }, []);
 
-  useEffect(loadCounts, [pathname, loadCounts]);
+  useEffect(() => loadCounts(), [pathname, loadCounts]);
+  const onLive = useCallback(() => loadCounts(true), [loadCounts]);
 
   useEffect(() => setOpen(false), [pathname]);
 
   const logout = async () => {
+    if (busy) return;
     setBusy(true);
-    await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
-    router.replace("/login");
-    router.refresh();
+    try {
+      await apiFetch("/api/auth/logout", { method: "POST" }, 10_000);
+    } catch {
+      toast.error("Couldn't reach the server — you were signed out on this device.");
+    } finally {
+      router.replace("/login");
+      router.refresh();
+    }
   };
 
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
@@ -123,10 +150,10 @@ export function Shell({
           </button>
           <Clocks />
           <div className="topbar-right">
-            {live && <LiveUpdates onChange={loadCounts} />}
+            {live && <LiveUpdates onChange={onLive} />}
             <span className="pill">Taxation Year {taxYear}</span>
-            <button className="btn btn-ghost" onClick={logout} disabled={busy}>
-              {busy ? "…" : "Logout"}
+            <button className="btn btn-ghost" onClick={logout} disabled={busy} aria-busy={busy}>
+              {busy ? <><span className="spinner dark" aria-hidden /> Signing out…</> : "Logout"}
             </button>
           </div>
         </header>

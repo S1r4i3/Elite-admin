@@ -1,4 +1,4 @@
-import { AdminPage, pageAccess } from "../admin-layout";
+import { AdminPage, pageAccess } from "@/app/admin-layout";
 import { getSettings } from "@/lib/db";
 import { SettingsForms } from "@/components/settings-forms";
 

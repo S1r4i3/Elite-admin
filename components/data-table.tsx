@@ -8,6 +8,9 @@ import { Modal, FormModal, confirmDialog } from "./modal";
 import { UploadForm } from "./upload-form";
 import { LIVE_EVENT, type LiveChange } from "./live-updates";
 import { MoveModal } from "./move-modal";
+import { apiJson } from "@/lib/api-client";
+import { toast } from "./toaster";
+import { LoadingButton } from "./loading-button";
 import { availableActions, DOC_STATUS_LABEL, MOVE_TARGETS, normalizeRole, ROLE_LABEL, STAGE_FOR_ROLE, STAGE_LABEL, type DocStatus, type StaffMember } from "@/lib/workflow-shared";
 
 const fmtDate = (v: unknown) => (v ? new Date(String(v)).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "—");
@@ -95,14 +98,16 @@ export function DataTable({
     const before = row.docStatus;
     setSavingId(row.id);
     setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, docStatus } : r)));
-    const res = await fetch(`/api/clients/${row.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ docStatus }) });
-    const json = await res.json().catch(() => ({}));
-    setSavingId(null);
-    if (!res.ok || !json.ok) {
+    try {
+      await apiJson(`/api/clients/${row.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ docStatus }) });
+      toast.success("Doc status saved.");
+      void load(true);
+    } catch (e) {
       setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, docStatus: before } : r)));
-      setNotice(json.error || "Could not update the doc status.");
-    } else setNotice("Doc status saved.");
-    void load(true);
+      toast.error((e as Error).message || "Could not update the doc status.");
+    } finally {
+      setSavingId(null);
+    }
   };
   const [rows, setRows] = useState<Row[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -117,36 +122,39 @@ export function DataTable({
   const [uploading, setUploading] = useState(false);
   const [viewing, setViewing] = useState<Row | null>(null);
   const [moving, setMoving] = useState<Row | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  useEffect(() => {
-    if (!notice) return;
-    const t = setTimeout(() => setNotice(null), 5000);
-    return () => clearTimeout(t);
-  }, [notice]);
+  const setNotice = (text: string) => toast.success(text);
+  const [refreshing, setRefreshing] = useState(false);
   const perPage = 10;
 
   const clientsLoaded = useRef(false);
 
+  // Only the newest request may update the table (an older, slower response must not overwrite a newer one).
+  const reqSeq = useRef(0);
   const load = useCallback(async (silent = false, refreshClients = false) => {
+    const seq = ++reqSeq.current;
     if (!silent) setLoading(true);
-    setError(null);
+    if (!silent) setError(null);
     try {
       const params = new URLSearchParams(section.query || {});
-      const res = await fetch(`/api/${section.collection}?${params}`, { cache: "no-store" });
-      const json = await res.json();
-      if (!res.ok || !json.ok) throw new Error(json.error || "Could not load data.");
+      const json = await apiJson<{ rows: Row[] }>(`/api/${section.collection}?${params}`, { cache: "no-store" });
+      if (seq !== reqSeq.current) return;
       setRows(json.rows);
-      if (section.columns.some((c) => c.cell === "client") && (!clientsLoaded.current || refreshClients)) {
-        const cr = await fetch("/api/clients", { cache: "no-store" }).then((r) => r.json());
-        if (cr.ok) {
+      setError(null);
+      // Document rows now arrive with clientName from the API; only other collections need the client list.
+      if (section.collection !== "documents" && section.collection !== "clients" && section.columns.some((c) => c.cell === "client") && (!clientsLoaded.current || refreshClients)) {
+        const cr = await apiJson<{ rows: Client[] }>("/api/clients", { cache: "no-store" }).catch(() => null);
+        if (cr && seq === reqSeq.current) {
           setClients(cr.rows);
           clientsLoaded.current = true;
         }
       }
     } catch (e) {
-      setError((e as Error).message);
+      if (seq !== reqSeq.current) return;
+      // A quiet background refresh keeps the rows already on screen; only a visible load shows the error state.
+      if (silent) toast.error((e as Error).message);
+      else setError((e as Error).message);
     } finally {
-      setLoading(false);
+      if (seq === reqSeq.current) setLoading(false);
     }
   }, [section]);
 
@@ -155,15 +163,26 @@ export function DataTable({
   }, [load]);
 
   // Live updates: reload quietly when the website changes this collection.
+  // Debounced — one upload fires several row events, which used to trigger several full reloads.
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let withClients = false;
     const onLive = (e: Event) => {
       const c = (e as CustomEvent<LiveChange>).detail;
       if (c.collection === section.collection || (c.collection === "handoffs" && section.collection === "clients") || (c.collection === "clients" && section.columns.some((col) => col.cell === "client"))) {
-        load(true, c.collection === "clients");
+        withClients = withClients || c.collection === "clients";
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+          load(true, withClients);
+          withClients = false;
+        }, 400);
       }
     };
     window.addEventListener(LIVE_EVENT, onLive);
-    return () => window.removeEventListener(LIVE_EVENT, onLive);
+    return () => {
+      window.removeEventListener(LIVE_EVENT, onLive);
+      if (timer) clearTimeout(timer);
+    };
   }, [load, section]);
 
   const clientName = (id: unknown) => {
@@ -263,7 +282,7 @@ export function DataTable({
             <small className="subtle">{String(row.email)}</small>
           </>
         ) : (
-          clientName(v)
+          String(row.clientName ?? clientName(v))
         );
       default: {
         const text = String(v ?? "");
@@ -275,16 +294,19 @@ export function DataTable({
   const save = async (data: Record<string, string>, row: Row | null) => {
     const url = row ? `/api/${section.collection}/${row.id}` : `/api/${section.collection}`;
     const body = { ...data, ...(row ? {} : section.query || {}) };
-    const res = await fetch(url, { method: row ? "PATCH" : "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.ok) throw new Error(json.error || "Could not save.");
-    await load();
+    // Throws with the server's message → FormModal shows it inline and restores the button.
+    await apiJson(url, { method: row ? "PATCH" : "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    toast.success(row ? "Changes saved." : "Added.");
+    void load(true);
   };
 
   const del = (row: Row) =>
     confirmDialog("Delete this record? This can't be undone.", async () => {
-      await fetch(`/api/${section.collection}/${row.id}`, { method: "DELETE" });
-      await load();
+      await apiJson(`/api/${section.collection}/${row.id}`, { method: "DELETE" });
+      // Remove it from the table at once; the quiet reload confirms.
+      setRows((rs) => rs.filter((r) => r.id !== row.id));
+      toast.success("Deleted.");
+      void load(true);
     });
 
   const exportCsv = () => {
@@ -339,9 +361,19 @@ export function DataTable({
             </select>
           ))}
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-            <button className="btn btn-secondary btn-sm" onClick={() => load()}>
+            <LoadingButton
+              className="btn btn-secondary btn-sm"
+              spinnerDark
+              loading={refreshing}
+              loadingText="Refreshing…"
+              onClick={async () => {
+                setRefreshing(true);
+                await load(true);
+                setRefreshing(false);
+              }}
+            >
               ↻ Refresh
-            </button>
+            </LoadingButton>
             <button className="btn btn-secondary btn-sm" onClick={exportCsv}>
               ⬇ CSV
             </button>
@@ -349,13 +381,19 @@ export function DataTable({
         </div>
 
         {loading ? (
-          <div className="loading-row">
-            <span className="spinner dark" /> Loading…
+          <div className="page-skeleton" style={{ padding: 16, gap: 10 }} role="status" aria-busy="true">
+            <span className="sr-only">Loading {section.title.toLowerCase()}…</span>
+            {Array.from({ length: 6 }, (_, i) => (
+              <div key={i} className="sk sk-row" />
+            ))}
           </div>
         ) : error ? (
-          <div className="empty">
+          <div className="empty" role="alert">
             <div className="big">⚠️</div>
             <p>{error}</p>
+            <button className="btn btn-secondary btn-sm" onClick={() => load()}>
+              Try again
+            </button>
           </div>
         ) : pageRows.length === 0 ? (
           <div className="empty">
@@ -516,11 +554,6 @@ export function DataTable({
             await load(true);
           }}
         />
-      )}
-      {notice && (
-        <div className="toast-root" role="status" onClick={() => setNotice(null)}>
-          <div className="toast">{notice}</div>
-        </div>
       )}
     </>
   );

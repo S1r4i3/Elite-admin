@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { AdminPage, pageAccess } from "../admin-layout";
+import { AdminPage, pageAccess } from "@/app/admin-layout";
 import { DataTable } from "@/components/data-table";
 import { SECTIONS, sectionBySlug } from "@/lib/sections";
 import { getStaff } from "@/lib/workflow";
