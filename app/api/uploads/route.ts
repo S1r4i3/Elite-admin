@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { requireAccess, type Access } from "@/lib/access";
+import { canSeeClient, requireAccess, type Access } from "@/lib/access";
 import { saveFile } from "@/lib/storage";
 import { BUCKET, sb, supabaseEnabled } from "@/lib/supabase";
 import { checkUpload, recordUpload, storageKeyFor, toKind, UploadError } from "@/lib/uploads";
@@ -40,6 +40,8 @@ async function fromSignedUpload(a: Access, req: Request) {
   // The key must be one we signed for this client: portal/{clientId}/{uuid}{ext}
   const m = key.match(/^portal\/([^/]+)\/[0-9a-f-]{36}(\.[a-z]+)$/);
   if (!m || m[1] !== clientId) throw new UploadError("Invalid upload.");
+  // Access first: never inspect or delete objects in a folder this person can't see.
+  if (!(await canSeeClient(a, clientId))) throw new UploadError("Choose a client.");
 
   const { data: info, error } = await sb().storage.from(BUCKET).info(key);
   if (error || !info) throw new UploadError("The file didn't reach storage. Please upload it again.");

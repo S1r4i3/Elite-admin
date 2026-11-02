@@ -59,6 +59,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ collec
       } else patch.assignedTo = wanted;
     }
   }
+  // Never accept identity / storage fields from the browser. Changing storageKey or clientId on a
+  // document would let someone with access to one client read or move another client's file.
+  for (const k of ["id", "createdAt", "updatedAt"]) delete patch[k];
+  if (collection === "documents") for (const k of ["storageKey", "mimeType", "sizeBytes", "clientId", "kind"]) delete patch[k];
+  if (collection === "clients" && !admin.isSuper) delete patch.clientId;
   delete patch.passwordHash; // never accept a raw hash from the client
   const password = String(patch.password ?? "");
   delete patch.password; // never store plain-text passwords
