@@ -43,6 +43,17 @@ export const staffLabel = (s: { code?: string | null; role: string; name?: strin
   return s.code ? `${s.code} · ${role}` : `${s.name || s.email || "—"} · ${role}`;
 };
 
+/**
+ * Document kinds each role may work with. Roles not listed see every kind.
+ * Tax Preparers prepare the return from the client's uploads; draft estimations (shared by the
+ * Reviewer) and final documents (shared by the Tax Filer) are hidden from them.
+ */
+export const RESTRICTED_DOC_KINDS: Partial<Record<Role, ("draft" | "final")[]>> = {
+  "Tax Preparer": ["draft", "final"],
+};
+export const docKindAllowed = (role: string | undefined, isSuper: boolean, kind: unknown) =>
+  isSuper || !(RESTRICTED_DOC_KINDS[normalizeRole(role)] ?? []).includes(String(kind) as "draft" | "final");
+
 /** Friendly role names for screens. */
 export const ROLE_LABEL: Record<Role, string> = {
   Admin: "Admin",

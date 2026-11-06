@@ -46,6 +46,8 @@ export type Section = {
   countKey?: "clients" | "uploads" | "draftsAwaiting" | "finals" | "newLeads" | "inquiries";
   /** Hidden from employees — only a Super Admin can open this section. */
   superOnly?: boolean;
+  /** Document kind this list shows (drafts/finals) — used for role restrictions. */
+  docKind?: "draft" | "final";
 };
 
 const YEARS = taxYears();
@@ -128,6 +130,7 @@ export const SECTIONS: Section[] = [
   },
   {
     slug: "drafts",
+    docKind: "draft",
     label: "Draft Estimations",
     icon: "🧮",
     group: "Clients",
@@ -159,6 +162,7 @@ export const SECTIONS: Section[] = [
   },
   {
     slug: "finals",
+    docKind: "final",
     label: "Final Documents",
     icon: "✅",
     group: "Clients",

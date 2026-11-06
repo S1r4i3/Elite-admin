@@ -3,7 +3,7 @@ import { cache } from "react";
 import { currentAdmin } from "./auth";
 import { clientIdsFor, findEmployeeByEmail } from "./db";
 import type { Client, Collection, DocumentRow, Row } from "./types";
-import { isAdminRole, normalizeRole, type Role } from "./workflow-shared";
+import { docKindAllowed, isAdminRole, normalizeRole, RESTRICTED_DOC_KINDS, type Role } from "./workflow-shared";
 
 /**
  * Who is signed in and what they may see.
@@ -58,6 +58,10 @@ export async function canSeeClient(a: Access, clientId: string) {
   return ids === null || ids.has(clientId);
 }
 
+/** Document kinds this person may not see (empty for Admins and most roles). */
+export const hiddenDocKinds = (a: Access): string[] => (a.isSuper ? [] : RESTRICTED_DOC_KINDS[a.role] ?? []);
+export const canSeeDocKind = (a: Access, kind: unknown) => docKindAllowed(a.role, a.isSuper, kind);
+
 /** Filters rows of clients/documents down to what this admin may see. */
 export async function scopeRows<T extends Row>(a: Access, coll: Collection, rows: T[]): Promise<T[]> {
   if (a.isSuper) return rows;
@@ -65,7 +69,7 @@ export async function scopeRows<T extends Row>(a: Access, coll: Collection, rows
   const ids = await allowedClientIds(a);
   if (!ids) return rows;
   if (coll === "clients") return rows.filter((r) => ids.has(r.id));
-  if (coll === "documents") return rows.filter((r) => ids.has(String((r as unknown as DocumentRow).clientId)));
+  if (coll === "documents") return rows.filter((r) => ids.has(String((r as unknown as DocumentRow).clientId)) && canSeeDocKind(a, (r as unknown as DocumentRow).kind));
   return rows;
 }
 
@@ -74,7 +78,7 @@ export async function canSeeRow(a: Access, coll: Collection, row: Row) {
   if (a.isSuper) return true;
   if (!canUseCollection(a, coll)) return false;
   if (coll === "clients") return canSeeClient(a, row.id);
-  if (coll === "documents") return canSeeClient(a, String((row as unknown as DocumentRow).clientId));
+  if (coll === "documents") return canSeeDocKind(a, (row as unknown as DocumentRow).kind) && canSeeClient(a, String((row as unknown as DocumentRow).clientId));
   return false;
 }
 

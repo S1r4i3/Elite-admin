@@ -3,6 +3,7 @@ import { AdminPage, pageAccess } from "@/app/admin-layout";
 import { DataTable } from "@/components/data-table";
 import { SECTIONS, sectionBySlug } from "@/lib/sections";
 import { getStaff } from "@/lib/workflow";
+import { canSeeDocKind } from "@/lib/access";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export default async function SectionPage({ params }: { params: Promise<{ sectio
   if (!section) notFound();
   const access = await pageAccess();
   if (section.superOnly && !access.isSuper) redirect("/");
+  if (section.docKind && !canSeeDocKind(access, section.docKind)) redirect("/");
 
   // Staff list with queue codes (DH1, TP1…) for "Move to" and the Admin's assign field.
   const staff = section.collection === "clients" ? await getStaff() : [];

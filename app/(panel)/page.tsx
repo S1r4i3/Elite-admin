@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AdminPage, pageAccess } from "@/app/admin-layout";
 import { stats } from "@/lib/db";
+import { canSeeDocKind } from "@/lib/access";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +16,9 @@ export default async function DashboardPage() {
   const cards = [
     { ico: "👥", n: s.clients, label: "Total clients", href: "/clients" },
     { ico: "📄", n: s.uploads, label: "Client documents", href: "/documents" },
-    { ico: "🧮", n: s.draftsAwaiting, label: "Drafts awaiting review", href: "/drafts" },
-    { ico: "✅", n: s.finals, label: "Final documents", href: "/finals" },
-  ];
+    canSeeDocKind(access, "draft") && { ico: "🧮", n: s.draftsAwaiting, label: "Drafts awaiting review", href: "/drafts" },
+    canSeeDocKind(access, "final") && { ico: "✅", n: s.finals, label: "Final documents", href: "/finals" },
+  ].filter((c): c is { ico: string; n: number; label: string; href: string } => Boolean(c));
 
   return (
     <AdminPage>

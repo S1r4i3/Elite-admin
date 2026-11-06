@@ -13,7 +13,7 @@ const fmtDate = (v: string) => new Date(v).toLocaleDateString(undefined, { month
 const fmtSize = (kb: number) => (kb >= 1024 ? (kb / 1024).toFixed(1) + " MB" : Math.round(kb) + " KB");
 
 /** The three document groups on a client's page, with upload and delete. */
-export function ClientDocuments({ clientId, initial }: { clientId: string; initial: DocumentRow[] }) {
+export function ClientDocuments({ clientId, initial, kinds = ["upload", "draft", "final"] }: { clientId: string; initial: DocumentRow[]; kinds?: readonly DocumentRow["kind"][] }) {
   const router = useRouter();
   const [upload, setUpload] = useState<null | "upload" | "draft" | "final">(null);
 
@@ -76,9 +76,9 @@ export function ClientDocuments({ clientId, initial }: { clientId: string; initi
 
   return (
     <div className="stack">
-      {group("upload", "Client uploads")}
-      {group("draft", "Draft estimations")}
-      {group("final", "Final documents")}
+      {kinds.includes("upload") && group("upload", "Client uploads")}
+      {kinds.includes("draft") && group("draft", "Draft estimations")}
+      {kinds.includes("final") && group("final", "Final documents")}
       {upload && (
         <UploadForm
           kind={upload}

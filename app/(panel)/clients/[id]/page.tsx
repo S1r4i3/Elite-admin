@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminPage, pageAccess } from "@/app/admin-layout";
-import { canSeeClient } from "@/lib/access";
+import { canSeeClient, canSeeDocKind } from "@/lib/access";
 import { decorateClients, listHandoffs } from "@/lib/workflow";
 import { DOC_STATUS_LABEL, STAGE_LABEL, type DocStatus, type Stage } from "@/lib/workflow-shared";
 import { get, listWhere } from "@/lib/db";
@@ -21,7 +21,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   // Employees can only open clients assigned to them.
   if (!client || !(await canSeeClient(access, client.id))) notFound();
   const [docs, [wf], history] = await Promise.all([
-    listWhere<DocumentRow>("documents", [{ field: "clientId", value: id }]), // only this client's rows, filtered in the database
+    listWhere<DocumentRow>("documents", [{ field: "clientId", value: id }]).then((all) => all.filter((d) => canSeeDocKind(access, d.kind))), // this client's rows, filtered in the database; role-hidden kinds removed
     decorateClients([client]),
     listHandoffs({ clientId: id, limit: 50 }),
   ]);
@@ -76,7 +76,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
               ["Uploads", docs.filter((d) => d.kind === "upload").length],
               ["Drafts", docs.filter((d) => d.kind === "draft").length],
               ["Finals", docs.filter((d) => d.kind === "final").length],
-            ].map(([label, n]) => (
+            ].filter(([label]) => label === "Uploads" || canSeeDocKind(access, label === "Drafts" ? "draft" : "final")).map(([label, n]) => (
               <div key={String(label)} style={{ background: "var(--canvas)", borderRadius: 12, padding: "12px 14px" }}>
                 <b style={{ fontSize: 22, display: "block" }}>{n}</b>
                 <span className="muted" style={{ fontSize: 13 }}>
@@ -159,7 +159,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       </div>
 
       <div className="mt-16">
-        <ClientDocuments clientId={client.id} initial={docs} />
+        <ClientDocuments clientId={client.id} initial={docs} kinds={(["upload", "draft", "final"] as const).filter((k) => canSeeDocKind(access, k))} />
       </div>
     </AdminPage>
   );

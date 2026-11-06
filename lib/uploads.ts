@@ -1,6 +1,6 @@
 import "server-only";
 import path from "node:path";
-import { canSeeClient, type Access } from "./access";
+import { canSeeClient, type Access, canSeeDocKind } from "./access";
 import { create, get, log } from "./db";
 import type { Client, DocumentRow } from "./types";
 
@@ -37,6 +37,7 @@ export async function recordUpload(
   client: Client,
   f: { kind: UploadKind; name: string; size: number; mimeType: string; storageKey: string; type?: string; taxYear?: string; note?: string },
 ) {
+  if (!canSeeDocKind(a, f.kind)) throw new UploadError("Your role can't share draft estimations or final documents.", 403);
   const row = await create<DocumentRow>("documents", {
     clientId: client.id,
     kind: f.kind,

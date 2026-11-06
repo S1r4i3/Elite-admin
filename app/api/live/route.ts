@@ -1,4 +1,4 @@
-import { freshClientIds, requireAccess } from "@/lib/access";
+import { canSeeDocKind, freshClientIds, requireAccess } from "@/lib/access";
 import { subscribe, liveStatus, type LiveEvent } from "@/lib/live";
 import { supabaseEnabled } from "@/lib/supabase";
 
@@ -24,7 +24,7 @@ export async function GET(req: Request) {
       await refreshAllowed(); // an assignment may just have changed
       return allowed!.has(e.id) || e.type === "UPDATE"; // an UPDATE may have removed them — let the table reload
     }
-    if (e.collection === "documents") return !!e.clientId && allowed.has(e.clientId);
+    if (e.collection === "documents") return !!e.clientId && allowed.has(e.clientId) && canSeeDocKind(access, e.kind);
     return false; // leads, inquiries and hand-off requests are Admin only
   };
   if (!supabaseEnabled()) return new Response("Live updates need SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY", { status: 503 });

@@ -1,3 +1,4 @@
+import { docKindAllowed } from "./workflow-shared";
 import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -369,7 +370,7 @@ export async function findEmployeeByEmail(email: string) {
   return db.employees.find((e) => e.email.toLowerCase() === email.toLowerCase()) ?? null;
 }
 
-type Scope = { isSuper: boolean; email: string };
+type Scope = { isSuper: boolean; email: string; role?: string };
 export type Counts = { clients: number; uploads: number; draftsAwaiting: number; finals: number; newLeads: number; inquiries: number };
 export type Stats = Counts & {
   pendingApprovals: number;
@@ -489,6 +490,7 @@ async function remoteStats(scope: Scope): Promise<Stats> {
     scope.isSuper ? listWhere<DB["logs"][number]>("logs", [], { limit: 6 }) : Promise.resolve([] as DB["logs"]),
   ]);
   for (const doc of chartDocs) {
+    if (!docKindAllowed(scope.role, scope.isSuper, doc.kind)) continue; // role-hidden kinds (e.g. Tax Preparer: drafts/finals)
     const d = new Date(doc.createdAt);
     const m = months.find((x) => x.key === `${d.getFullYear()}-${d.getMonth()}`);
     if (m) m.n++;

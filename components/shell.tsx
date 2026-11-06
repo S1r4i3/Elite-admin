@@ -6,7 +6,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { SECTIONS, NAV_GROUPS } from "@/lib/sections";
 import { LiveUpdates } from "./live-updates";
 import { NavProgress } from "./nav-progress";
-import { staffLabel } from "@/lib/workflow-shared";
+import { docKindAllowed, staffLabel } from "@/lib/workflow-shared";
 import { apiFetch } from "@/lib/api-client";
 import { toast } from "./toaster";
 
@@ -105,10 +105,10 @@ export function Shell({
           </div>
 
 
-          {NAV_GROUPS.filter((group) => SECTIONS.some((s) => s.group === group && (isSuper || !s.superOnly))).map((group) => (
+          {NAV_GROUPS.filter((group) => SECTIONS.some((s) => s.group === group && (isSuper || !s.superOnly) && (!s.docKind || docKindAllowed(admin.role, isSuper, s.docKind)))).map((group) => (
             <div className="nav-group" key={group}>
               <p className="nav-group-title">{group}</p>
-              {SECTIONS.filter((s) => s.group === group && (isSuper || !s.superOnly)).map((s) => {
+              {SECTIONS.filter((s) => s.group === group && (isSuper || !s.superOnly) && (!s.docKind || docKindAllowed(admin.role, isSuper, s.docKind))).map((s) => {
                 const n = s.countKey ? counts[s.countKey] : undefined;
                 return (
                   <Link key={s.slug} href={`/${s.slug}`} className={isActive(`/${s.slug}`) ? "active" : ""}>

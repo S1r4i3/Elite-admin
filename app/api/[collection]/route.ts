@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { hashPassword } from "@/lib/auth";
-import { allowedClientIds, forbidden, normalizeAssignee, requireAccess, scopeRows } from "@/lib/access";
+import { allowedClientIds, forbidden, hiddenDocKinds, normalizeAssignee, requireAccess, scopeRows } from "@/lib/access";
 import { clientNames, create, findEmployeeByEmail, list, listWhere, log, nextClientId, nextEmployeeCode } from "@/lib/db";
 import type { Where } from "@/lib/remote";
 import { normalizeRole } from "@/lib/workflow-shared";
@@ -48,6 +48,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ collecti
       if (ids) where.push({ field: collection === "clients" ? "id" : "clientId", op: "in", value: [...ids] });
       rows = await listWhere<Row>(collection, where);
     }
+    // Role restriction (e.g. Tax Preparers don't see draft estimations or final documents).
+    const hidden = collection === "documents" ? hiddenDocKinds(access) : [];
+    if (hidden.length) rows = rows.filter((r) => !hidden.includes(String(r.kind)));
     if (collection === "documents" && rows.length) {
       const names = await clientNames([...new Set(rows.map((r) => String(r.clientId)))]);
       rows = rows.map((r) => ({ ...r, clientName: names.get(String(r.clientId)) ?? "—" }));
