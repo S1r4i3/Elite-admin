@@ -1,3 +1,4 @@
+import { DRAFT_WITH_REVIEWER, INTERNAL_DRAFT_STAGES } from "./workflow-shared";
 import "server-only";
 import path from "node:path";
 import { canSeeClient, type Access, canSeeDocKind } from "./access";
@@ -37,7 +38,7 @@ export async function recordUpload(
   client: Client,
   f: { kind: UploadKind; name: string; size: number; mimeType: string; storageKey: string; type?: string; taxYear?: string; note?: string },
 ) {
-  if (!canSeeDocKind(a, f.kind)) throw new UploadError("Your role can't share draft estimations or final documents.", 403);
+  if (!canSeeDocKind(a, f.kind)) throw new UploadError(f.kind === "final" ? "Your role can't share final documents." : "Your role can't share draft estimations.", 403);
   const row = await create<DocumentRow>("documents", {
     clientId: client.id,
     kind: f.kind,
@@ -49,7 +50,8 @@ export async function recordUpload(
     mimeType: f.mimeType || "application/octet-stream",
     storageKey: f.storageKey,
     note: String(f.note || "").slice(0, 2000),
-    status: f.kind === "draft" ? "awaiting_review" : "",
+    // Before the reviewer approves, a draft stays internal; afterwards (Admin re-sharing) it goes straight to the client.
+    status: f.kind === "draft" ? (INTERNAL_DRAFT_STAGES.includes(String(client.stage || "unassigned")) ? DRAFT_WITH_REVIEWER : "awaiting_review") : "",
     uploadedBy: f.kind === "upload" ? "client" : "staff",
   });
   await log(a.email, `Uploaded ${f.kind}`, `${client.firstName} ${client.lastName} — ${f.name}`);

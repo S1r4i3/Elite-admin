@@ -44,13 +44,20 @@ export const staffLabel = (s: { code?: string | null; role: string; name?: strin
 };
 
 /**
- * Document kinds each role may work with. Roles not listed see every kind.
- * Tax Preparers prepare the return from the client's uploads; draft estimations (shared by the
- * Reviewer) and final documents (shared by the Tax Filer) are hidden from them.
+ * Document kinds each role may not see. Roles not listed see every kind.
+ * Tax Preparers upload draft estimations (for the reviewer) but never see final documents.
  */
 export const RESTRICTED_DOC_KINDS: Partial<Record<Role, ("draft" | "final")[]>> = {
-  "Tax Preparer": ["draft", "final"],
+  "Tax Preparer": ["final"],
 };
+
+/**
+ * A draft uploaded before the Tax Reviewer approves the return is internal: stored with no status
+ * (shown here as "with_reviewer") and invisible to the client. "Approve return" releases it
+ * (status → awaiting_review), which is when the client sees it.
+ */
+export const DRAFT_WITH_REVIEWER = "with_reviewer";
+export const INTERNAL_DRAFT_STAGES = ["unassigned", "documents", "preparation", "review"];
 export const docKindAllowed = (role: string | undefined, isSuper: boolean, kind: unknown) =>
   isSuper || !(RESTRICTED_DOC_KINDS[normalizeRole(role)] ?? []).includes(String(kind) as "draft" | "final");
 
@@ -135,7 +142,7 @@ export const WF_ACTIONS: WfActionDef[] = [
     stage: "review",
     role: "Reviewer",
     label: "Approve return",
-    hint: "Goes to the client for approval. Share the draft with the client first (Drafts → Upload).",
+    hint: "Sends the draft estimation (uploaded by the preparer) to the client for approval.",
     tone: "primary",
   },
   {

@@ -53,7 +53,7 @@ export type Client = Row & {
 };
 
 export type DocKind = "upload" | "draft" | "final";
-export type DraftStatus = "awaiting_review" | "approved" | "changes_requested" | "";
+export type DraftStatus = "with_reviewer" | "awaiting_review" | "approved" | "changes_requested" | "";
 
 export type DocumentRow = Row & {
   clientId: string;

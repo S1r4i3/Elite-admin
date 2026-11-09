@@ -63,6 +63,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ collec
   // document would let someone with access to one client read or move another client's file.
   for (const k of ["id", "createdAt", "updatedAt"]) delete patch[k];
   if (collection === "documents") for (const k of ["storageKey", "mimeType", "sizeBytes", "clientId", "kind"]) delete patch[k];
+  // Releasing a draft to the client happens through "Approve return"; employees can't flip it by editing.
+  if (collection === "documents" && !admin.isSuper) delete patch.status;
   if (collection === "clients" && !admin.isSuper) delete patch.clientId;
   delete patch.passwordHash; // never accept a raw hash from the client
   const password = String(patch.password ?? "");

@@ -77,7 +77,7 @@ const toDocument = (r: any): DocumentRow => ({
   sizeKb: Math.round(Number(r.size ?? 0) / 1024),
   storageKey: r.storage_key ?? "",
   note: r.note ?? "",
-  status: r.status ?? "",
+  status: r.status ?? (r.kind === "draft" ? "with_reviewer" : ""),
   clientComment: r.client_comment ?? "",
   uploadedBy: r.kind === "upload" ? "client" : "staff",
   createdAt: r.created_at,
@@ -172,7 +172,7 @@ function toColumns(coll: RemoteCollection, p: Record<string, any>) {
     set("category", p.type);
     set("tax_year", p.taxYear);
     set("note", p.note);
-    set("status", p.status);
+    if (p.status !== undefined) out.status = !p.status || p.status === "with_reviewer" ? null : p.status; // internal draft = no status
     set("client_comment", p.clientComment);
     if (p.storageKey !== undefined) out.storage_key = p.storageKey;
     if (p.mimeType !== undefined) out.mime_type = p.mimeType;

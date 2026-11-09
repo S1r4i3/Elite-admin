@@ -119,7 +119,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           <WorkflowActions
             client={wf}
             me={{ email: access.email, role: access.role, isSuper: access.isSuper }}
-            hasDraft={docs.some((d) => d.kind === "draft" && d.status === "awaiting_review")}
+            hasDraft={docs.some((d) => d.kind === "draft" && (d.status === "awaiting_review" || d.status === "with_reviewer"))}
           />
         </div>
 

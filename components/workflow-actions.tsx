@@ -118,7 +118,7 @@ export function WorkflowActions({
     if (def.action === "review_approve" && !hasDraft && !client.correction) {
       setUpload({
         kind: "draft",
-        intro: "Please share the draft estimation with the client first. Upload it here — the return is approved right after.",
+        intro: "No draft estimation yet. Upload it here — the return is approved right after and the client receives it.",
         then: def,
       });
       return;

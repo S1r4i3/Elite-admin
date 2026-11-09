@@ -118,7 +118,7 @@ export function UploadForm({
     }
   };
 
-  const title = kind === "draft" ? "Share draft estimation" : kind === "final" ? "Share final document" : "Upload client document";
+  const title = kind === "draft" ? "Upload draft estimation" : kind === "final" ? "Share final document" : "Upload client document";
 
   return (
     <Modal title={title} onClose={onClose} locked={busy}>
@@ -127,6 +127,11 @@ export function UploadForm({
           <div className="wf-banner wf-banner-warn" role="alert" style={{ marginBottom: 14 }}>
             <strong>{intro}</strong>
           </div>
+        )}
+        {kind === "draft" && !intro && (
+          <p className="hint" style={{ marginTop: 0 }}>
+            Before the return is approved, the draft goes to the Tax Reviewer only. The client receives it when the reviewer clicks &ldquo;Approve return&rdquo;.
+          </p>
         )}
         <div className="field">
           <label htmlFor="u-client">Client</label>

@@ -136,13 +136,13 @@ export const SECTIONS: Section[] = [
     group: "Clients",
     collection: "documents",
     title: "Draft Estimations",
-    subtitle: "Drafts shared with clients for review",
+    subtitle: "Drafts stay with the Tax Reviewer until the return is approved — then the client gets them",
     query: { kind: "draft" },
     countKey: "draftsAwaiting",
     uploadKind: "draft",
     search: ["name", "note"],
     filters: [
-      { key: "status", label: "All statuses", options: ["awaiting_review", "approved", "changes_requested"] },
+      { key: "status", label: "All statuses", options: ["with_reviewer", "awaiting_review", "approved", "changes_requested"] },
       { key: "taxYear", label: "All tax years", options: YEARS },
     ],
     columns: [
@@ -156,7 +156,7 @@ export const SECTIONS: Section[] = [
     fields: [
       { name: "name", label: "File name", required: true },
       { name: "taxYear", label: "Tax year", type: "select", options: YEARS, half: true },
-      { name: "status", label: "Status", type: "select", options: ["awaiting_review", "approved", "changes_requested"], half: true },
+      { name: "status", label: "Status", type: "select", options: ["with_reviewer", "awaiting_review", "approved", "changes_requested"], half: true },
       { name: "note", label: "Note to client", type: "textarea" },
     ],
   },
