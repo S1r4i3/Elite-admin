@@ -240,26 +240,30 @@ export async function runAction(a: Access, clientId: string, action: WfAction, n
   if (!def) throw new WorkflowError("Unknown action.");
   if (def.noteLabel && !note.trim()) throw new WorkflowError("Please add a reason.");
   const client = await loadClient(clientId);
-  if (action === "review_approve" && !client.correction) {
-    const { count, error: e } = await sb()
-      .from("portal_documents")
-      .select("id", { count: "exact", head: true })
-      .eq("customer_id", clientId)
-      .eq("kind", "draft")
-      .or("status.is.null,status.eq.awaiting_review");
-    fail("check drafts", e);
-    if (!count) throw new WorkflowError("Upload the draft estimation first — the client receives it when you approve.");
+  // "Approve return": the drafts kept with the reviewer are released to the client first, because the
+  // database rule (wf_transition) only approves when a draft is shared. If approval fails they're hidden again.
+  let released: string[] = [];
+  if (action === "review_approve") {
+    const { data: internal, error: e1 } = await sb().from("portal_documents").select("id").eq("customer_id", clientId).eq("kind", "draft").is("status", null);
+    fail("find drafts", e1);
+    released = (internal ?? []).map((d) => d.id as string);
+    if (released.length) {
+      const { error: e2 } = await sb().from("portal_documents").update({ status: "awaiting_review" }).in("id", released);
+      fail("release drafts", e2);
+    } else if (!client.correction) {
+      const { count } = await sb().from("portal_documents").select("id", { count: "exact", head: true }).eq("customer_id", clientId).eq("kind", "draft").eq("status", "awaiting_review");
+      if (!count) throw new WorkflowError("Upload the draft estimation first — the client receives it when you approve.");
+    }
   }
   const { data, error } = await sb().rpc("wf_transition", { p_client: clientId, p_action: action, p_actor: a.email, p_note: note.trim() || null });
+  if (error && released.length) {
+    const { error: undo } = await sb().from("portal_documents").update({ status: null }).in("id", released);
+    if (undo) console.error("[workflow] could not hide drafts again", undo.message);
+  }
   if (error) {
     const msg = error.message.startsWith("WF: ") ? error.message.slice(4) : null;
     if (msg) throw new WorkflowError(msg);
     throw new Error(`[workflow] ${action}: ${error.message}`);
-  }
-  if (action === "review_approve") {
-    // Release the drafts the preparer/reviewer uploaded: this is when the client sees them.
-    const { error: re } = await sb().from("portal_documents").update({ status: "awaiting_review" }).eq("customer_id", clientId).eq("kind", "draft").is("status", null);
-    if (re) console.error("[workflow] release drafts failed", re.message);
   }
   const onBehalf = a.isSuper && def.role === "client" ? " (recorded by Admin for the client)" : "";
   await log(a.email, ACTION_LOG_LABEL[action] + onBehalf, `${clientName(client)}${note.trim() ? ` — ${note.trim()}` : ""}`);
