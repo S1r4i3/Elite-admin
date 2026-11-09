@@ -23,12 +23,13 @@ DH – Document Handler                         Stage: documents
    ▼
 TP – Tax Preparer                             Stage: preparation
    • Prepare return, calculations
+   • Upload the draft estimation (stays internal — the client can't see it yet)
    • "Move to →" a Tax Reviewer        (immediate)
    • (can send back to DH if documents are missing)
    ▼
 TR – Tax Reviewer (RV1)                       Stage: review
-   • Uploads/shares the draft estimation with the client
-   • "Approve return"  ──────────────► CLIENT REVIEW
+   • Checks the return and the preparer's draft estimation
+   • "Approve return"  ──────────────► CLIENT REVIEW (the draft is released to the client now)
    • "Request changes" (reason) ─────► back to the SAME TP  ↺
    ▼
 CLIENT REVIEW (client dashboard)              Stage: client_review
@@ -56,7 +57,7 @@ Rework: after "Request changes" (reviewer or client) the TP fixes it and clicks
 | move to TP | documents → preparation | DH | Immediate; doc status must be "received" |
 | move to TR | preparation → review | TP | Immediate |
 | move to DH | preparation → documents | TP | Immediate (missing documents) |
-| `review_approve` | review → client_review | TR | A draft must be shared with the client |
+| `review_approve` | review → client_review | TR | A draft must exist; internal drafts are released to the client first |
 | `review_changes` | review → preparation | TR | Reason required · back to the same TP |
 | `resubmit_review` | preparation → review | TP | Only during rework · back to the same TR |
 | `client_approve` | client_review → filing | Client | Auto-assigns the Tax Filer |
